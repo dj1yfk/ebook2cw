@@ -1,0 +1,48 @@
+.TH ebook2cw 1 "JUNE 2007" Linux "User Manuals"
+.SH NAME
+ebook2cw \- convert ebooks to morse mp3s
+.SH SYNOPSIS
+.B ebook2cw 
+[OPTIONS]
+.SH DESCRIPTION
+.B ebook2cw
+ebook2cw is a command line program which converts a plain text ebook to morse
+code MP3 files. It works on several platforms, including Windows and Linux.
+
+A number of CW and MP3 parameters can be changed from their default values, by
+command line switches. These are (default values in brackets):
+
+.B -w wpm 
+- CW speed in words per minute [25]
+
+.B -f freq 
+- audio frequency in Hz [600]
+
+.B -R risetime 
+- risetime, in samples [50]
+
+.B -F falltime 
+- falltime, samples [50]
+
+.B -s samplerate 
+- samplerate for the MP3 file [11025]
+
+.B -b bitrate 
+- MP3 bitrate, kbps [16]
+
+.B -q quality 
+- MP3 quality, 1 (best) to 9 (worst) [3]
+
+.B -c chapter separator 
+- Split chapters at this string [CHAPTER]
+
+.B -o outfile-name 
+- Output filename (chapter number and .mp3 will be appended) [Chapter]
+
+
+.SH AUTHOR
+Fabian Kurz, DJ1YFK <mail@fkurz.net>
+
+http://fkurz.net/ham/ebook2cw.html
+.SH "SEE ALSO"
+.BR morse (1)

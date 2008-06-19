@@ -1,0 +1,26 @@
+ebook2cw v0.6.4 - convert ebooks to morse mp3s - Fabian Kurz, DJ1YFK
+---------------------------------------------------------------------
+
+Website: http://fkurz.net/ham/ebook2cw.html
+
+ebook2cw is a command line program which converts a plain text ebook to morse
+code MP3 files. It works on several platforms, including Windows and Linux.
+
+It automatically splits and numbers the output files by chapters.
+
+For a detailled description, please refer to the man-page or the project
+website.
+
+
+INSTALL
+--------
+1) Binaries
+Statically compiled binaries are available at the project website, for Linux
+(i386) and Win32. Those should be suitable for most users.
+
+2) Source
+A Makefile is included; it compiles both under Linux and Windows (with MinGW).
+DESTDIR is /usr by default (so the binary will be in /usr/bin/).
+
+make [DESTDIR=..]
+make install
