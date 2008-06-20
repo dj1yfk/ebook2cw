@@ -92,13 +92,14 @@ char id3_year[5]="";
 int init_cw (int wpm, int freq, int rt, int ft);
 void help (void);
 void showcodes (int i);
-void makeword(char * text, int encoding);
+void makeword(char * text);
 void closefile (int letter, int cw);
 void openfile (int chapter);
 void buf_check (int j);
 void command (char * cmd);
 void readconfig (void);
 void setparameter (char p, char * value);
+void loadmapping(char *filename, int enc);
 
 /* main */
 
@@ -211,7 +212,7 @@ int main (int argc, char** argv) {
 				command(word);
 			}
 			else {
-				makeword(word, encoding);
+				makeword(word);
 				cw++; tw++; qw++;
 			}
 
@@ -328,7 +329,7 @@ int init_cw (int wpm, int freq, int rt, int ft) {
 /* makeword  --  converts 'text' to CW by concatenating dit_buf amd dah_bufs,
  * encodes this to MP3 and writes to open filehandle outfile */
 
-void makeword(char * text, int encoding) {
+void makeword(char * text) {
  const char *code;				/* CW code as . and - */
  int outbytes;
 
@@ -627,6 +628,7 @@ void readconfig (void) {
 	char tmp[81] = "";
 	char p;					/* parameter */
 	char v[80]="";			/* value */
+	static char mapfile[256]="";
 
 	if ((conf = fopen(configfile, "r")) == NULL) {
 		fprintf(stderr, "Error: Unable to open config file %s!\n", configfile);
@@ -649,8 +651,17 @@ void readconfig (void) {
 		}
 	}
 
-	/* mapping filenames TBD */
+	/* mapping filenames */
 
+	while ((feof(conf) == 0) && (fgets(tmp, 80, conf) != NULL)) {
+		tmp[strlen(tmp)-1]='\0';
+		if (sscanf(tmp, "isomapfile=%255s", mapfile) == 1) {
+				loadmapping(mapfile, ISO8859);
+		}
+		else if (sscanf(tmp, "utf8mapfile=%255s", mapfile) == 1) {
+				loadmapping(mapfile, UTF8);
+		}
+	}
 }
 
 
@@ -734,5 +745,9 @@ void setparameter (char i, char *value) {
 			case 'h':
 				help();
 		} /* switch */
+
+}
+
+void loadmapping(char *filename, int enc) {
 
 }
