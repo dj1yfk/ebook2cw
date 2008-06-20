@@ -625,13 +625,17 @@ void buf_check (int j) {
 	if (j > inpcm_size - max) {
 			inpcm_size +=  max;
 			mp3buffer_size +=  (int) (1.25 * max + 7200.0);
-			if ((inpcm = realloc(inpcm, inpcm_size*sizeof(short int)))== NULL) 
+			if ((inpcm = realloc(inpcm, inpcm_size*sizeof(short int)))== NULL) {
 				fprintf(stderr, "Error: Can't realloc inpcm[%d]\n", inpcm_size);
+				exit(EXIT_FAILURE);
+			}
 			
-			if ((mp3buffer = realloc(mp3buffer, mp3buffer_size*sizeof(char)))
-						   	== NULL) 
+			if ((mp3buffer = realloc(mp3buffer, mp3buffer_size*sizeof(char))) 
+						   	== NULL) {
 				fprintf(stderr, "Error: Can't realloc mp3buffer[%d]\n", 
 								mp3buffer_size);
+				exit(EXIT_FAILURE);
+			}
 		}
 
 }

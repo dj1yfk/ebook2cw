@@ -86,7 +86,7 @@ int main (int argc, char** argv) {
 	int pos, i;
 	int encoding = ISO8859;
 	int c;
- 	char word[11000]="";				/* will be cut when > 1024 chars long */
+ 	char word[11000]="";	
  	char text[11000];
 	char *querystring;
 
@@ -101,14 +101,12 @@ int main (int argc, char** argv) {
 	lame_set_quality(gfp, quality); 
 	
 	if (lame_init_params(gfp) < 0) {
-		fprintf(stderr, "Failed: lame_init_params(gfp) \n");
 		return(1);
 	}
 
 	/* init pcm_buf and mp3_buf */
 
 	if ((inpcm = calloc(PCMBUFFER, sizeof(short int))) == NULL) {
-		fprintf(stderr, "Error: Can't allocate inpcm[%d]!\n", PCMBUFFER);
 		exit(EXIT_FAILURE);
 	}
 	else {
@@ -116,7 +114,6 @@ int main (int argc, char** argv) {
 	}
 
 	if ((mp3buffer = calloc(MP3BUFFER, sizeof(unsigned char))) == NULL) {
-		fprintf(stderr, "Error: Can't allocate mp3buffer[%d]!\n", MP3BUFFER);
 		exit(EXIT_FAILURE);
 	}
 	else {
@@ -190,8 +187,6 @@ int init_cw (int wpm, int freq, int rt, int ft) {
 	if (farnsworth) {
 
 		if (farnsworth > wpm) {
-			fprintf(stderr, "Error: Effective speed (-e %d) must be lower "
-							"than character speed (-w %d)!\n", farnsworth, wpm);
 			exit(EXIT_FAILURE);
 		}
 
@@ -208,7 +203,6 @@ int init_cw (int wpm, int freq, int rt, int ft) {
 	if (!ditlen) {
 		/* allocate memory for the buffer */
 		if ((dah_buf = calloc(len, sizeof(short int))) == NULL) {
-			fprintf(stderr, "Error: Can't allocate dah_buf[%d]\n", len);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -224,8 +218,6 @@ int init_cw (int wpm, int freq, int rt, int ft) {
 		dah_buf[x] = (short int) (val * 20000.0);
 	}
 
-	/*	printf("dah_buf[%d], ", x); */
-
 	/* dit */
 	len = (int) (6.0*samplerate/(5.0*wpm));			/* in samples */
 
@@ -233,7 +225,6 @@ int init_cw (int wpm, int freq, int rt, int ft) {
 	if (!ditlen) {
 		/* allocate memory for the buffer */
 		if ((dit_buf = calloc(len, sizeof(short int))) == NULL) {
-			fprintf(stderr, "Error: Can't allocate dit_buf[%d]\n", len);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -249,8 +240,6 @@ int init_cw (int wpm, int freq, int rt, int ft) {
 		dit_buf[x] = (short int) (val * 20000.0);
 	}
 	
-	/* printf("dit_buf[%d]\n\n", x); */
-
 	return x;		/* = length of dit/silence */
 }
 
@@ -267,7 +256,6 @@ void makeword(char * text, int encoding) {
 
  int c, i, j, u, w;
  int prosign = 0;
- unsigned char last=0;		/* for utf8 2-byte characters */
 
  j = 0;						/* position in 'inpcm' buffer */
 
@@ -292,36 +280,10 @@ void makeword(char * text, int encoding) {
 	else if (encoding == ISO8859) {	
 		code = iso8859[c];
 	}
-	else if (encoding == UTF8) {
-		/* Character may be 1-byte ASCII or 2-byte UTF8 */
-		if (!(c & 128)) {						/* MSB = 0 -> 7bit ASCII */
-			code = iso8859[c];					/* subset of iso8859 */
-		}
-		else {
-			if (last && (c < 192) ) {			/* this is the 2nd byte */
-				/* 110yyyyy 10zzzzzz -> 00000yyy yyzzzzzz */
-				c = ((last & 31) << 6) | (c & 63);
-				code = utf8table[c];
-				last = 0;
-			}
-			else {								/* this is the first byte */
-				last = c;
-			}
-		}
-	}
-
-	if (last) continue;				/* first of two-byte character read */
 
 	/* Not found anything ... */
 	if (code == NULL) {
 		code = " ";
-		if (c < 255) {
-			fprintf(stderr, "Warning: don't know CW for '%c'\n", c);
-		}
-		else {
-			fprintf(stderr, "Warning: don't know CW for unicode &#%d;\n", c);
-		}
-
 	}
 
 	/* code contains letter as ./-, now assemble pcm buffer */
@@ -361,12 +323,10 @@ void makeword(char * text, int encoding) {
  
  outbytes = lame_encode_buffer(gfp, inpcm, inpcm, j, mp3buffer, mp3buffer_size);
  if (outbytes < 0) {
-	fprintf(stderr, "Error: lame_encode_buffer returned %d. Exit.\n", outbytes);
 	exit(EXIT_FAILURE);
  }
 
  if (fwrite(mp3buffer, sizeof(char), outbytes, outfile) != outbytes) {
-	fprintf(stderr, "Error: Writing %db to file failed. Exit.\n", outbytes);
 	exit(EXIT_FAILURE);
  }
 
@@ -381,12 +341,10 @@ void closefile (int letter, int cw) {
  outbytes = lame_encode_flush(gfp, mp3buffer, mp3buffer_size);
  
  if (outbytes < 0) {
-	fprintf(stderr, "Error: lame_encode_buffer returned %d.\n", outbytes);
 	exit(EXIT_FAILURE);
  }
 
  if (fwrite(mp3buffer, sizeof(char), outbytes, outfile) != outbytes) {
-	fprintf(stderr, "Error: Writing %db to file failed. Exit.\n", outbytes);
 	exit(EXIT_FAILURE);
  }
 
@@ -410,12 +368,11 @@ void buf_check (int j) {
 			inpcm_size +=  max;
 			mp3buffer_size +=  (int) (1.25 * max + 7200.0);
 			if ((inpcm = realloc(inpcm, inpcm_size*sizeof(short int)))== NULL) 
-				fprintf(stderr, "Error: Can't realloc inpcm[%d]\n", inpcm_size);
+						exit(1);
 			
 			if ((mp3buffer = realloc(mp3buffer, mp3buffer_size*sizeof(char)))
 						   	== NULL) 
-				fprintf(stderr, "Error: Can't realloc mp3buffer[%d]\n", 
-								mp3buffer_size);
+					exit(1);
 		}
 
 }
