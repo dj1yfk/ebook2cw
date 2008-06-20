@@ -118,7 +118,7 @@ int main (int argc, char** argv) {
 		readconfig();
 	}
 
-	while((i=getopt(argc,argv, "o:w:W:e:f:R:F:s:b:q:c:a:t:k:y:Q:S:phun"))!= -1){
+	while((i=getopt(argc,argv, "o:w:W:e:f:uc:k:R:F:s:b:q:a:t:y:Q:S:phn"))!= -1){
 		setparameter(i, optarg);
 	} /* while */
 
