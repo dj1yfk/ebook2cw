@@ -672,12 +672,16 @@ void command (char * cmd) {
 				wpm = i;
 				ditlen = init_cw(wpm, freq, rt, ft);
 			}
+			else 
+				fprintf(stderr, "Invalid speed: %s. Ignored.\n", cmd);
 			break;
 		case 'e':
 			if (i > 1) {
 				farnsworth = i;
 				ditlen = init_cw(wpm, freq, rt, ft);
 			}
+			else 
+				fprintf(stderr, "Invalid speed: %s. Ignored.\n", cmd);
 			break;
 		default:
 			fprintf(stderr, "Invalid command %s. Ignored.\n", cmd);				
