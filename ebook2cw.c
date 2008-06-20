@@ -92,6 +92,7 @@ void makeword(char * text, int encoding);
 void closefile (int letter, int cw);
 void openfile (int chapter);
 void buf_check(int j);
+void command (char * cmd);
 
 /* main */
 
@@ -271,8 +272,15 @@ int main (int argc, char** argv) {
 					
 				openfile(chapter);
 			}
-			makeword(word, encoding);
-			cw++; tw++; qw++;
+
+			/* check for commands: |f or |w */
+			if (word[0] == '|') {
+				command(word);
+			}
+			else {
+				makeword(word, encoding);
+				cw++; tw++; qw++;
+			}
 
 			word[0] = '\0';
 			pos = 0;
@@ -286,6 +294,7 @@ int main (int argc, char** argv) {
 			}
 
 		} /* word */
+
 	} /* eof */
 
 	closefile(chapter, cw);
@@ -640,3 +649,37 @@ void buf_check (int j) {
 
 }
 
+
+
+void command (char * cmd) {
+
+	int i = 0;
+	unsigned char c = 0;
+
+	sscanf(cmd, "|%c%d", &c, &i);
+
+	switch (c) {
+		case 'f':
+			if ((i > 100) && (i < (int) samplerate/2)) {
+				freq = i;
+				init_cw(wpm, freq, rt, ft);
+			}
+			else 
+				fprintf(stderr, "Invalid frequency: %s. Ignored.\n", cmd);
+			break;
+		case 'w':
+			if (i > 1) {
+				wpm = i;
+				ditlen = init_cw(wpm, freq, rt, ft);
+			}
+			break;
+		case 'e':
+			if (i > 1) {
+				farnsworth = i;
+				ditlen = init_cw(wpm, freq, rt, ft);
+			}
+			break;
+		default:
+			fprintf(stderr, "Invalid command %s. Ignored.\n", cmd);				
+	}
+}
