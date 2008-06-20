@@ -77,7 +77,14 @@ int ditlen=0;				/* number of samples in a 'dit' */
 /* Chapters are split by this string */
 char chapterstr[80]="CHAPTER";
 char chapterfilename[80]="Chapter";		/* full filename: Chapter%04d.mp3 */
+
+
+/* Character encoding, mapping, etc */
 int encoding = ISO8859;
+char isomapindex[256];					/* contains the chars to be mapped */
+int utf8mapindex[256];						
+char isomap[256][4]; 					/* by these strings */
+char utf8map[256][4]; 
 
 /* Config file location */
 char *configfile = "ebook2cw.conf";
@@ -100,6 +107,7 @@ void command (char * cmd);
 void readconfig (void);
 void setparameter (char p, char * value);
 void loadmapping(char *filename, int enc);
+char *mapstring (char *string);
 
 /* main */
 
@@ -212,7 +220,7 @@ int main (int argc, char** argv) {
 				command(word);
 			}
 			else {
-				makeword(word);
+				makeword(mapstring(word));
 				cw++; tw++; qw++;
 			}
 
@@ -651,7 +659,10 @@ void readconfig (void) {
 		}
 	}
 
-	/* mapping filenames */
+	/* mapping */
+
+	memset(isomapindex,  0, sizeof(int));
+	memset(utf8mapindex, 0, sizeof(int));
 
 	while ((feof(conf) == 0) && (fgets(tmp, 80, conf) != NULL)) {
 		tmp[strlen(tmp)-1]='\0';
@@ -748,6 +759,92 @@ void setparameter (char i, char *value) {
 
 }
 
-void loadmapping(char *filename, int enc) {
+/* loadmapping
+ *
+ * opens a mapping file and writes the mappings to the mapping variables:
+ * index:     utf8mapindex, isomapindex
+ * mappings:  utf8map, isomap
+ *
+ * */
+
+
+void loadmapping(char *file, int enc) {
+	FILE *mp;
+	char tmp[81] = "";
+	int i=0;
+	char c=0;
+	wchar_t lc;
+	char s[4]="";
+
+	if ((mp = fopen(file, "r")) == NULL) {
+		fprintf(stderr, "Warning: Unable to open mapping file %s. Ignored.\n", 
+								file);
+		return;
+	}
+
+	while ((feof(mp) == 0) && (fgets(tmp, 80, mp) != NULL)) {
+		tmp[strlen(tmp)-1]='\0';
+
+		switch (enc) {
+			case ISO8859:
+				if (sscanf(tmp, "%c %3s", &c, s) == 2) {
+					isomapindex[i] = c;
+					strncpy(isomap[i], s, 3);
+					i++;
+				}	
+				break;
+			case UTF8:
+				/* XXX tbd */
+				break;
+		}
+
+		/* only memory for 256 mappings allocated. never going to happen */
+		if (i == 255) {
+			break;
+		}
+
+	} /* while */
 
 }
+
+
+
+
+
+char *mapstring (char * string) {
+	static char new[2048]="";
+	char c;
+	int i, replaced;
+
+	memset(new, 0, 2048);
+
+	switch (encoding) {
+		case ISO8859:
+			while ((c = *string++) != '\0') {
+				replaced = 0;
+				for (i=0; i < 255; i++) {
+					if (isomapindex[i] == 0) {
+						break;
+					}
+					else if (isomapindex[i] == c) {
+						strcat(new, isomap[i]);
+						replaced = 1;
+						break;
+					}
+				}
+				if (!replaced) {
+					new[strlen(new)] = c;
+					new[strlen(new)+1] = '\0';
+				}
+			}
+	}
+	
+	return new;
+
+}
+
+
+
+
+
+
