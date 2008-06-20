@@ -77,6 +77,10 @@ int ditlen=0;				/* number of samples in a 'dit' */
 /* Chapters are split by this string */
 char chapterstr[80]="CHAPTER";
 char chapterfilename[80]="Chapter";		/* full filename: Chapter%04d.mp3 */
+int encoding = ISO8859;
+
+/* Config file location */
+char *configfile = "ebook2cw.conf";
 
 /* ID3-tag data: author and title */
 char id3_author[80]="CW audio book";
@@ -91,14 +95,15 @@ void showcodes (int i);
 void makeword(char * text, int encoding);
 void closefile (int letter, int cw);
 void openfile (int chapter);
-void buf_check(int j);
+void buf_check (int j);
 void command (char * cmd);
+void readconfig (void);
+void setparameter (char p, char * value);
 
 /* main */
 
 int main (int argc, char** argv) {
 	int pos, i, original_wpm;
-	int encoding = ISO8859;
 	int c;
  	char word[1024]="";				/* will be cut when > 1024 chars long */
 	int chapter = 0;
@@ -106,86 +111,14 @@ int main (int argc, char** argv) {
 
 	infile = stdin;
 
-	while((i=getopt(argc,argv, "o:w:W:e:f:R:F:s:b:q:c:a:t:k:y:Q:S:phun"))!= -1) {
-		switch (i) {
-			case 'w':
-				if ((wpm = atoi(optarg)) < 1) {
-					fprintf(stderr, "Error: Speed (-w) must be > 0!\n");
-					exit(EXIT_FAILURE);
-				}
-				break;
-			case 'f':
-				freq = atoi(optarg);
-				break;
-			case 'R':
-				rt = atoi(optarg);
-				break;
-			case 'F':
-				ft = atoi(optarg);
-				break;
-			case 's':
-				samplerate = atoi(optarg);
-				break;
-			case 'b':
-				brate = atoi(optarg);
-				break;
-			case 'q':
-				quality = atoi(optarg);
-				break;
-			case 'c':
-				strncpy(chapterstr, optarg, 78);
-				break;
-			case 'o':
-				strncpy(chapterfilename, optarg, 78);
-				break;
-			case 'a':
-				strncpy(id3_author, optarg, 78);
-				break;
-			case 't':
-				strncpy(id3_title, optarg, 75);
-				break;
-			case 'k':
-				strncpy(id3_comment, optarg, 78);
-				break;
-			case 'y':
-				strncpy(id3_year, optarg, 4);
-				break;
-			case 'Q':
-				if ((qrq = atoi(optarg)) < 1) {
-					fprintf(stderr, "Error: QRQ time (-Q) must be > 0!\n");
-					exit(EXIT_FAILURE);
-				}
-				break;
-			case 'u':
-				encoding = UTF8;
-				break;
-			case 'S':
-				if (strstr(optarg, "ISO")) {
-					showcodes(1);
-				}
-				else {
-					showcodes(0);
-				}
-				break;
-			case 'e':				/* effective speed in WpM */
-				if ((farnsworth = atoi(optarg)) < 1) {
-					fprintf(stderr, "Error: Eff. speed (-e) must be > 0!\n");
-					exit(EXIT_FAILURE);
-				}
-				break;
-			case 'W':
-				ews = atof(optarg);
-				break;
-			case 'n':
-				reset = 0;
-				break;
-			case 'p':
-				pBT = 0;
-				break;
-			case 'h':
-			default:
-				help();
-		} /* switch */
+	/* Find and read ebook2cw.conf */
+
+	if (fopen(configfile, "r") != NULL) {
+		readconfig();
+	}
+
+	while((i=getopt(argc,argv, "o:w:W:e:f:R:F:s:b:q:c:a:t:k:y:Q:S:phun"))!= -1){
+		setparameter(i, optarg);
 	} /* while */
 
 	if (optind < argc) {		/* something left? if so, use as infile */
@@ -686,4 +619,120 @@ void command (char * cmd) {
 		default:
 			fprintf(stderr, "Invalid command %s. Ignored.\n", cmd);				
 	}
+}
+
+
+void readconfig (void) {
+	FILE *conf;
+	char tmp[81] = "";
+	char p;					/* parameter */
+	char v[80]="";			/* value */
+
+	if ((conf = fopen(configfile, "r")) == NULL) {
+		fprintf(stderr, "Error: Unable to open config file %s!\n", configfile);
+		exit(EXIT_FAILURE);
+	}
+
+	/* We start in the [settings] section.
+	 * All settings are ^[a-zA-Z]=.+$ 
+	 * */
+
+	while ((feof(conf) == 0) && (fgets(tmp, 80, conf) != NULL)) {
+		tmp[strlen(tmp)-1]='\0';
+		if (strstr(tmp, "[mappings]")) {		/* all parameters read */
+			break;
+		}
+		else {
+			if (sscanf(tmp, "%c=%s", &p, v) == 2) {
+				setparameter(p, v);
+			}
+		}
+	}
+
+	/* mapping filenames TBD */
+
+}
+
+
+void setparameter (char i, char *value) {
+
+		switch (i) {
+			case 'w':
+				if ((wpm = atoi(value)) < 1) {
+					fprintf(stderr, "Error: Speed (-w) must be > 0!\n");
+					exit(EXIT_FAILURE);
+				}
+				break;
+			case 'f':
+				freq = atoi(value);
+				break;
+			case 'R':
+				rt = atoi(value);
+				break;
+			case 'F':
+				ft = atoi(value);
+				break;
+			case 's':
+				samplerate = atoi(value);
+				break;
+			case 'b':
+				brate = atoi(value);
+				break;
+			case 'q':
+				quality = atoi(value);
+				break;
+			case 'c':
+				strncpy(chapterstr, value, 78);
+				break;
+			case 'o':
+				strncpy(chapterfilename, value, 78);
+				break;
+			case 'a':
+				strncpy(id3_author, value, 78);
+				break;
+			case 't':
+				strncpy(id3_title, value, 75);
+				break;
+			case 'k':
+				strncpy(id3_comment, value, 78);
+				break;
+			case 'y':
+				strncpy(id3_year, value, 4);
+				break;
+			case 'Q':
+				if ((qrq = atoi(value)) < 1) {
+					fprintf(stderr, "Error: QRQ time (-Q) must be > 0!\n");
+					exit(EXIT_FAILURE);
+				}
+				break;
+			case 'u':
+				encoding = UTF8;
+				break;
+			case 'S':
+				if (strstr(value, "ISO")) {
+					showcodes(1);
+				}
+				else {
+					showcodes(0);
+				}
+				break;
+			case 'e':				/* effective speed in WpM */
+				if ((farnsworth = atoi(value)) < 1) {
+					fprintf(stderr, "Error: Eff. speed (-e) must be > 0!\n");
+					exit(EXIT_FAILURE);
+				}
+				break;
+			case 'W':
+				ews = atof(value);
+				break;
+			case 'n':
+				reset = 0;
+				break;
+			case 'p':
+				pBT = 0;
+				break;
+			case 'h':
+				help();
+		} /* switch */
+
 }
