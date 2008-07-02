@@ -82,9 +82,11 @@ char chapterfilename[80]="Chapter";		/* full filename: Chapter%04d.mp3 */
 /* Character encoding, mapping, etc */
 int encoding = ISO8859;
 char isomapindex[256];					/* contains the chars to be mapped */
-int utf8mapindex[256];						
+int utf8mapindex[256];					/* for utf8 as decimal code */
 char isomap[256][4]; 					/* by these strings */
-char utf8map[256][4]; 
+char utf8map[256][8]; 
+int use_isomapping = 0;
+int use_utf8mapping = 0;
 
 /* Config file location */
 char *configfile = "ebook2cw.conf";
@@ -120,7 +122,13 @@ int main (int argc, char** argv) {
 
 	infile = stdin;
 
-	/* Find and read ebook2cw.conf */
+	printf("ebook2cw %s - (c) 2008 by Fabian Kurz, DJ1YFK\n\n", VERSION);
+
+	/* Find and read ebook2cw.conf 
+	 *
+	 * TODO: Find in ~/.ebook2cw/
+	 *
+	 */
 
 	if (fopen(configfile, "r") != NULL) {
 		readconfig();
@@ -171,7 +179,6 @@ int main (int argc, char** argv) {
 		mp3buffer_size = MP3BUFFER;
 	}
 
-	printf("ebook2cw %s - (c) 2008 by Fabian Kurz, DJ1YFK\n", VERSION);
 	printf("Speed: %dwpm, Freq: %dHz, Chapter: >%s<, Encoding: %s\n", 
 		wpm, freq, chapterstr, encoding == UTF8 ? "UTF-8" : "ISO 8859-1");
 
@@ -630,9 +637,16 @@ void command (char * cmd) {
 	}
 }
 
+/* readconfig
+ *
+ * reads a ebook2cw.conf file and sets parameters from the [settings]
+ * part, then looks for character mappings in the [mappings] part.
+ *
+ * A sample config `ebook2cw.conf' is included.
+ */
 
 void readconfig (void) {
-	FILE *conf;
+	FILE *conf = NULL;
 	char tmp[81] = "";
 	char p;					/* parameter */
 	char v[80]="";			/* value */
@@ -642,6 +656,8 @@ void readconfig (void) {
 		fprintf(stderr, "Error: Unable to open config file %s!\n", configfile);
 		exit(EXIT_FAILURE);
 	}
+
+	printf("Reading configuration file: %s\n\n", configfile);
 
 	/* We start in the [settings] section.
 	 * All settings are ^[a-zA-Z]=.+$ 
@@ -659,10 +675,8 @@ void readconfig (void) {
 		}
 	}
 
-	/* mapping */
+	/* mappings */
 
-	memset(isomapindex,  0, sizeof(int));
-	memset(utf8mapindex, 0, sizeof(int));
 
 	while ((feof(conf) == 0) && (fgets(tmp, 80, conf) != NULL)) {
 		tmp[strlen(tmp)-1]='\0';
@@ -772,9 +786,10 @@ void loadmapping(char *file, int enc) {
 	FILE *mp;
 	char tmp[81] = "";
 	int i=0;
-	char c=0;
-	wchar_t lc;
-	char s[4]="";
+	int k=0;
+	char c1=0;
+	char c2=0;
+	char s[6]="";
 
 	if ((mp = fopen(file, "r")) == NULL) {
 		fprintf(stderr, "Warning: Unable to open mapping file %s. Ignored.\n", 
@@ -782,24 +797,48 @@ void loadmapping(char *file, int enc) {
 		return;
 	}
 
+	switch (enc) {
+			case ISO8859:
+				memset(isomapindex, 0, sizeof(char)*256);
+				use_isomapping = 1;
+				break;
+			case UTF8:
+				memset(utf8mapindex, 0, sizeof(int)*256);
+				use_utf8mapping = 1;
+				break;
+	}
+
+
 	while ((feof(mp) == 0) && (fgets(tmp, 80, mp) != NULL)) {
 		tmp[strlen(tmp)-1]='\0';
 
 		switch (enc) {
 			case ISO8859:
-				if (sscanf(tmp, "%c %3s", &c, s) == 2) {
-					isomapindex[i] = c;
+				if (sscanf(tmp, "%c=%3s", &c1, s) == 2) {
+					isomapindex[i] = c1;
 					strncpy(isomap[i], s, 3);
 					i++;
 				}	
 				break;
 			case UTF8:
-				/* XXX tbd */
+				if (sscanf(tmp, "%c=%5s", &c1, s) == 2) {
+						utf8mapindex[i] = c1;
+						strncpy(utf8map[i], s, 5);
+						i++;
+				}
+				else if (sscanf(tmp, "%c%c=%5s", &c1, &c2, s) == 3) {
+						k = ((c1 & 31) << 6) | (c2 & 63);	/* decimal */
+						utf8mapindex[i] = k;				/* unicode char */
+						strncpy(utf8map[i], s, 5);
+						i++;
+				}
 				break;
 		}
 
 		/* only memory for 256 mappings allocated. never going to happen */
 		if (i == 255) {
+			fprintf(stderr, "Warning: Maximum number (256) of mappings reached"
+							" in %s! Stopped here.", file);
 			break;
 		}
 
@@ -814,12 +853,16 @@ void loadmapping(char *file, int enc) {
 char *mapstring (char * string) {
 	static char new[2048]="";
 	char c;
-	int i, replaced;
+	int i, j, replaced;
+	unsigned char last=0;
 
 	memset(new, 0, 2048);
-
+	
 	switch (encoding) {
 		case ISO8859:
+			if (!use_isomapping) {
+				return string;
+			}
 			while ((c = *string++) != '\0') {
 				replaced = 0;
 				for (i=0; i < 255; i++) {
@@ -834,11 +877,50 @@ char *mapstring (char * string) {
 				}
 				if (!replaced) {
 					new[strlen(new)] = c;
-					new[strlen(new)+1] = '\0';
 				}
 			}
+		break;
+		case UTF8:
+			if (!use_utf8mapping) {
+				return string;
+			}
+			while ((c = *string++) != '\0') {
+				j = 0;
+				replaced = 0;
+				if (!last && (c & 128)) {		/* first of a 2 char seq */
+					last = c;
+					continue;
+				}
+				if (last) {	
+					/* 110yyyyy 10zzzzzz -> 00000yyy yyzzzzzz */
+					j = ((last & 31) << 6) | (c & 63);
+				}
+				else {
+					j = c;
+				}
+				for (i=0; i < 255; i++) {
+					if (utf8mapindex[i] == 0) {
+						break;
+					}
+					else if (utf8mapindex[i] == j) {
+						strcat(new, utf8map[i]);
+						replaced = 1;
+						break;
+					}
+				}
+				if (!replaced) {
+					if (last) {
+						new[strlen(new)] = last;
+						new[strlen(new)] = c;
+					}
+					else {
+						new[strlen(new)] = c;
+					}
+				}
+				last = 0;
+			}
 	}
-	
+
 	return new;
 
 }
