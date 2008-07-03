@@ -486,7 +486,7 @@ void closefile (int letter, int cw) {
 
 
 
-/* openfile -- starts a new chapter by opening Chapter%d.mp3 */
+/* openfile -- starts a new chapter by opening a new file as outfile */
 
 void openfile (int chapter) {
 	char mp3filename[80] = "";
@@ -598,7 +598,10 @@ void buf_check (int j) {
 
 }
 
-
+/* command
+ * Receives a 'word' which starts with a | and then (possibly) a command,
+ * to change speed or tone freq.
+ */
 
 void command (char * cmd) {
 
@@ -847,7 +850,10 @@ void loadmapping(char *file, int enc) {
 }
 
 
-
+/* mapstring
+ * receives a string and replaces all characters that show up in isomapindex /
+ * utf8mapindex with their replacement strings, and returns it.
+ */
 
 
 char *mapstring (char * string) {

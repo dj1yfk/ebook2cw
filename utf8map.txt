@@ -1,0 +1,14 @@
+# UTF-8 mapping example for ebook2cw..
+
+ä=ae
+ü=ue
+ö=ue
+Ä=ae
+Ü=ue
+Ö=ue
+ß=sz
+
+
+
+
+

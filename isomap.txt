@@ -1,0 +1,11 @@
+# Example ISO8859 character mapping file of ebook2cw. Consult the documentation
+# for details.
+
+ä=ae
+ö=oe
+ü=ue
+Ä=aw
+Ü=ue
+Ö=oe
+ß=sz
+
