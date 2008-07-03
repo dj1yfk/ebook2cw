@@ -3,7 +3,7 @@
 ebook2cw \- convert ebooks to morse mp3s
 .SH SYNOPSIS
 .B ebook2cw 
-[OPTIONS]
+[OPTIONS] [INFILE]
 .SH DESCRIPTION
 .B ebook2cw
 ebook2cw is a command line program which converts a plain text ebook to morse
@@ -32,6 +32,9 @@ reset to the initial value at the start of each chapter. [0]
 
 .B -n
 - Disables resetting the speed when using the -Q option.
+
+.B -p
+- Disables the paragraph separator (<BT>)
 
 .B -R risetime 
 - risetime, in samples [50]
