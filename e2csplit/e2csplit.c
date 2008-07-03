@@ -98,8 +98,5 @@ void openfile (void) {
 		exit(1);
 	}
 
-
-
-
 }
 

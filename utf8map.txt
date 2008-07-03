@@ -9,10 +9,10 @@
 
 ä=ae
 ü=ue
-ö=ue
+ö=oe
 Ä=ae
 Ü=ue
-Ö=ue
+Ö=oe
 ß=sz
 
 
