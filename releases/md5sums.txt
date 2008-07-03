@@ -7,3 +7,4 @@ f843ff84f3a8fa5234e5c1fe694d26c6  releases/ebook2cw-0.6.1.tar.gz
 58accf8bbd8d1f5b582c444b107fac84  releases/ebook2cw-0.6.2.tar.gz
 0c8b2f40812f8405f5dc266e95d9590f  releases/ebook2cw-0.6.3.tar.gz
 bea78588dada08449a7065fe6222ca75  releases/ebook2cw-0.6.4.tar.gz
+c014888eee32b0622524481b3d86fa94  releases/ebook2cw-0.7.0.tar.gz

@@ -1,6 +1,9 @@
-0.6.5 / 2008-06-??   Fabian Kurz   <mail@fkurz.net>
+0.7.0 / 2008-06-??   Fabian Kurz   <mail@fkurz.net>
 	* Paragraph separator (<BT>) can be disabled by
 	  -p command line switch (suggested by DJ3KU).
+	* All command line parameters can now also be set in the config
+	  file ebook2cw.conf.
+	* Arbitrary character mappings are now possible.
 
 0.6.4 / 2008-05-20   Fabian Kurz   <mail@fkurz.net>
 	* Added "Farnsworth" spacing (-e) and extra inter-word spacing (-W) 
