@@ -39,6 +39,7 @@ dist:
 	mkdir ebook2cw-$(VERSION)
 	cp ebook2cw.c codetables.h ChangeLog ebook2cw.1 \
 			ebook2cw.conf isomap.txt utf8map.txt \
+			ebook2cw.bat \
 			README COPYING Makefile ebook2cw-$(VERSION)
 	tar -zcf ebook2cw-$(VERSION).tar.gz ebook2cw-$(VERSION)
 	mv ebook2cw-$(VERSION) releases/
