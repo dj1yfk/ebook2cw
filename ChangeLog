@@ -1,4 +1,4 @@
-0.7.0 / 2008-06-??   Fabian Kurz   <mail@fkurz.net>
+0.7.0 / 2008-07-03   Fabian Kurz   <mail@fkurz.net>
 	* Paragraph separator (<BT>) can be disabled by
 	  -p command line switch (suggested by DJ3KU).
 	* All command line parameters can now also be set in the config

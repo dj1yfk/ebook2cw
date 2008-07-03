@@ -89,7 +89,7 @@ int use_isomapping = 0;
 int use_utf8mapping = 0;
 
 /* Config file location */
-char *configfile = "ebook2cw.conf";
+char configfile[1024] = "ebook2cw.conf";
 
 /* ID3-tag data: author and title */
 char id3_author[80]="CW audio book";
@@ -124,15 +124,11 @@ int main (int argc, char** argv) {
 
 	printf("ebook2cw %s - (c) 2008 by Fabian Kurz, DJ1YFK\n\n", VERSION);
 
-	/* Find and read ebook2cw.conf 
-	 *
-	 * TODO: Find in ~/.ebook2cw/
-	 *
+	/* 
+	 * Find and read ebook2cw.conf 
 	 */
 
-	if (fopen(configfile, "r") != NULL) {
-		readconfig();
-	}
+	readconfig();
 
 	while((i=getopt(argc,argv, "o:w:W:e:f:uc:k:Q:R:pF:s:b:q:a:t:y:S:hn"))!= -1){
 		setparameter(i, optarg);
@@ -653,11 +649,10 @@ void readconfig (void) {
 	char tmp[81] = "";
 	char p;					/* parameter */
 	char v[80]="";			/* value */
-	static char mapfile[256]="";
+	static char mapfile[1024]="";
 
 	if ((conf = fopen(configfile, "r")) == NULL) {
-		fprintf(stderr, "Error: Unable to open config file %s!\n", configfile);
-		exit(EXIT_FAILURE);
+		return;				/* No config found -> silently ignore */
 	}
 
 	printf("Reading configuration file: %s\n\n", configfile);

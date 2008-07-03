@@ -1,4 +1,4 @@
-# UTF-8 mapping example for ebook2cw..
+﻿# UTF-8 mapping example for ebook2cw..
 #
 # The format of each line is:
 # x=yyy
@@ -14,8 +14,6 @@
 Ü=ue
 Ö=oe
 ß=sz
-
-
 
 
 
