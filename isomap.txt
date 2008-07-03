@@ -1,5 +1,12 @@
-# Example ISO8859 character mapping file of ebook2cw. Consult the documentation
-# for details.
+# Example ISO8859 character mapping file of ebook2cw.
+#
+# The format of each line is:
+# x=yyy
+#
+# where x is the character to be mapped to the string yyy
+#
+# x is a single character, yyy is a string of up to 3 characters.
+
 
 ä=ae
 ö=oe

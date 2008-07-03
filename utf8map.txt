@@ -1,4 +1,11 @@
 # UTF-8 mapping example for ebook2cw..
+#
+# The format of each line is:
+# x=yyy
+#
+# where x is the character to be mapped to the string yyy
+#
+# x is a single character, yyy is a string of up to 3 characters.
 
 ä=ae
 ü=ue
