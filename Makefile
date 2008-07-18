@@ -1,15 +1,15 @@
 # ebook2cw Makefile -- Fabian Kurz, DJ1YFK -- http://fkurz.net/ham/ebook2cw.html
 
-VERSION=0.7.0
+VERSION=0.7.1
 DESTDIR ?= /usr
 
 all: ebook2cw
 
 ebook2cw: ebook2cw.c codetables.h
-	gcc ebook2cw.c -pedantic -Wall -lm -lmp3lame -D VERSION=\"$(VERSION)\" -o ebook2cw
+	gcc ebook2cw.c -pedantic -Wall -lm -lmp3lame -D DESTDIR=\"$(DESTDIR)\" -D VERSION=\"$(VERSION)\" -o ebook2cw
 
 static:
-	gcc -static ebook2cw.c -lmp3lame -lm -D VERSION=\"$(VERSION)\" -o ebook2cw
+	gcc -static ebook2cw.c -lmp3lame -lm -D DESTDIR=\"$(DESTDIR)\" -D VERSION=\"$(VERSION)\" -o ebook2cw
 
 install:
 	install -d -v                      $(DESTDIR)/share/man/man1/

@@ -28,6 +28,13 @@ source code looks properly indented with tw=4
 #include <unistd.h>
 #include <ctype.h>
 
+/* for mkdir, not used on Windows */
+#if !__MINGW32__
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <errno.h>
+#endif
+
 #include "codetables.h"
 
 #ifndef VERSION
@@ -39,6 +46,10 @@ source code looks properly indented with tw=4
 
 #define ISO8859 0
 #define UTF8    1
+
+#define SINE 0
+#define SAWTOOTH 1
+#define SQUARE 2
 
 lame_global_flags *gfp;
 
@@ -60,6 +71,7 @@ int reset = 1;				/* reset QRQed speed every chapter? */
 int farnsworth = 0;			/* extra spacing in dit-lengths */
 float ews = 0.0;			/* extra word spaces  */ 
 int pBT = 1;				/* send <BT> (-...-) for each new paragraph */
+int waveform = SINE;
 
 /* the buffers for dit, dah, raw pcm and mp3 output, will be calloc'ed to the
  * default values, and -if needed- realloc'ed to the needed size */
@@ -130,7 +142,7 @@ int main (int argc, char** argv) {
 
 	readconfig();
 
-	while((i=getopt(argc,argv, "o:w:W:e:f:uc:k:Q:R:pF:s:b:q:a:t:y:S:hn"))!= -1){
+	while((i=getopt(argc,argv, "o:w:W:e:f:uc:k:Q:R:pF:s:b:q:a:t:y:S:hnT:"))!= -1){
 		setparameter(i, optarg);
 	} /* while */
 
@@ -293,7 +305,19 @@ int init_cw (int wpm, int freq, int rt, int ft) {
 	}
 
 	for (x=0; x < len; x++) {
-		val = sin(2*M_PI*freq*x/samplerate);
+
+		switch (waveform) {
+			case SINE:
+				val = sin(2*M_PI*freq*x/samplerate);
+				break;
+			case SAWTOOTH:
+				val=((1.0*freq*x/samplerate)-floor(1.0*freq*x/samplerate))-0.5;
+				break;
+			case SQUARE:
+				val = ceil(sin(2*M_PI*freq*x/samplerate))-0.5;
+				break;
+		}
+
 		if (x < rt)  			/* shaping with sin^2 */
 				val *= pow(sin(M_PI*x/(2.0*rt)),2);
 		
@@ -318,7 +342,19 @@ int init_cw (int wpm, int freq, int rt, int ft) {
 	}
 
 	for (x=0; x < len; x++) {
-		val = sin(2*M_PI*freq*x/samplerate);
+
+		switch (waveform) {
+			case SINE:
+				val = sin(2*M_PI*freq*x/samplerate);
+				break;
+			case SAWTOOTH:
+				val=((1.0*freq*x/samplerate)-floor(1.0*freq*x/samplerate))-0.5;
+				break;
+			case SQUARE:
+				val = ceil(sin(2*M_PI*freq*x/samplerate))-0.5;
+				break;
+		}
+
 		if (x < rt)  
 			val *= pow(sin(M_PI*x/(2.0*rt)), 2); 
 		
@@ -631,6 +667,14 @@ void command (char * cmd) {
 			else 
 				fprintf(stderr, "Invalid speed: %s. Ignored.\n", cmd);
 			break;
+		case 'T':
+			if (i > 0 && i < 3) {
+				waveform = i;
+				init_cw(wpm, freq, rt, ft);
+			}
+			else 
+				fprintf(stderr, "Invalid waveform: %d. Ignored.\n", i);
+			break;
 		default:
 			fprintf(stderr, "Invalid command %s. Ignored.\n", cmd);				
 	}
@@ -641,18 +685,90 @@ void command (char * cmd) {
  * reads a ebook2cw.conf file and sets parameters from the [settings]
  * part, then looks for character mappings in the [mappings] part.
  *
+ * ebook2cw.conf is first searched in the current directory, then
+ * ~/.ebook2cw/ and finally in DESTDIR/share/doc/ebook2cw/examples/
+ * and copied to ~/.ebook2cw/ if needed.
+ *
  * A sample config `ebook2cw.conf' is included.
  */
 
 void readconfig (void) {
 	FILE *conf = NULL;
-	char tmp[81] = "";
+	char tmp[1024] = "";
 	char p;					/* parameter */
 	char v[80]="";			/* value */
 	static char mapfile[1024]="";
+	char *homedir = NULL;
+	int j=0;
 
 	if ((conf = fopen(configfile, "r")) == NULL) {
-		return;				/* No config found -> silently ignore */
+		/* ebook2cw.conf not in current directory */
+		if ((homedir = getenv("HOME")) == NULL) {	/* no home or Windows */
+			return;
+		}
+#if !__MINGW32__
+		/* Linux/Unix: Look for ~/.ebook2cw/ebook2cw.conf */
+		snprintf(configfile, 2048, "%s/.ebook2cw/ebook2cw.conf", homedir);
+		if ((conf = fopen(configfile, "r")) == NULL) {
+			/* Not in ~/.ebook2cw/ either, look for it in
+			 * DESTDIR/ebook2cw/examples/ */
+			if ((conf = fopen(DESTDIR
+				"/share/doc/ebook2cw/examples/ebook2cw.conf","r")) == NULL) {
+				/* cannot find ebook2cw.conf anywhere. silently return */
+				return;
+			}
+			else {
+				printf("First run. Copying example configuration files to "
+					"%s/.ebook2cw/\n\n", homedir);
+				snprintf(tmp, 1024, "%s/.ebook2cw/", homedir);
+				j = mkdir(tmp, 0777);
+				if (j && (errno != EEXIST)) {
+					printf("Failed to create %s. Resuming without config.",tmp);
+					return;
+				}
+				/* ~/.ebook2cw/ created. Now copy ebook2cw.conf and map files */
+				snprintf(tmp, 1024, "install -m 644 "DESTDIR
+					"/share/doc/ebook2cw/examples/ebook2cw.conf %s/.ebook2cw/",
+					homedir);
+				if (system(tmp)) {
+					printf("Failed to create ~/.ebook2cw/ebook2cw.conf. "
+									"Resuming without config.");
+					return;
+				}
+
+				snprintf(tmp, 1024, "install -m 644 "DESTDIR
+					"/share/doc/ebook2cw/examples/isomap.txt %s/.ebook2cw/",
+					homedir);
+				if (system(tmp)) {
+					printf("Failed to create ~/.ebook2cw/isomap.txt. "
+									"Resuming without config.");
+					return;
+				}
+
+				snprintf(tmp, 1024, "install -m 644 "DESTDIR
+					"/share/doc/ebook2cw/examples/utf8map.txt %s/.ebook2cw/",
+					homedir);
+				if (system(tmp)) {
+					printf("Failed to create ~/.ebook2cw/utf8map.txt. "
+									"Resuming without config.");
+					return;
+				}
+
+				/* Succcess. files installed to ~/.ebook2cw/ */
+
+				snprintf(configfile, 1024, "%s/.ebook2cw/ebook2cw.conf",
+								homedir);
+
+				/* open newly installed config file ... */
+				if ((conf = fopen(configfile, "r")) == NULL) {
+					printf("Couldn't read %s! Continue without config.",
+									configfile);
+					return;
+				}
+
+			}
+		}
+#endif
 	}
 
 	printf("Reading configuration file: %s\n\n", configfile);
@@ -767,6 +883,18 @@ void setparameter (char i, char *value) {
 				break;
 			case 'h':
 				help();
+				break;
+			case 'T':
+				if (strstr(value, "SINE") || atoi(value) == 1) {
+					waveform = SINE;
+				}
+				else if (strstr(value, "SAWTOOTH") || atoi(value) == 2) {
+					waveform = SAWTOOTH;
+				}
+				else if (strstr(value, "SQUARE") || atoi(value) == 3) {
+					waveform = SQUARE;	
+				}
+				break;
 		} /* switch */
 
 }
