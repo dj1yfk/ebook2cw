@@ -53,84 +53,112 @@ source code looks properly indented with tw=4
 
 lame_global_flags *gfp;
 
-FILE *outfile;
-FILE *infile;
 
-/* MP3 samplerate, bitrate, quality. */
-int samplerate = 11025;
-int brate = 16;
-int quality = 5;
+/* Struct CWP to keep all CW parameters */
 
-/* CW parameters */
-int wpm = 25;
-int freq = 600;
-int rt = 50;				/* rise/fall time in samples */
-int ft = 50;
-int qrq = 0;				/* rise speed by 1 WpM every qrq minutes */
-int reset = 1;				/* reset QRQed speed every chapter? */
-int farnsworth = 0;			/* extra spacing in dit-lengths */
-float ews = 0.0;			/* extra word spaces  */ 
-int pBT = 1;				/* send <BT> (-...-) for each new paragraph */
-int waveform = SINE;
+typedef struct {
+	/* CW parameters */
+	int wpm, 
+		freq, 
+		rt, 
+		ft, 
+		qrq,
+		reset, 
+		farnsworth, 
+		pBT, 
+		waveform, 
+		original_wpm;
+	float ews;	
+	/* mp3, buffers */
+	int samplerate,
+		brate,
+		quality;
+	int inpcm_size,
+		mp3buffer_size,
+		ditlen;
+	short int *dit_buf,
+			*dah_buf,
+			*inpcm;
+	unsigned char *mp3buffer;
+	/* Chapter splitting */
+	char chapterstr[80], 
+		 chapterfilename[80];
+	/* encoding and mapping */
+	int encoding,
+		use_isomapping,
+		use_utf8mapping;
+	char isomapindex[256];		/* contains the chars to be mapped */
+	int utf8mapindex[256];		/* for utf8 as decimal code */
+	char isomap[256][4]; 		/* by these strings */
+	char utf8map[256][8];
 
-/* the buffers for dit, dah, raw pcm and mp3 output, will be calloc'ed to the
- * default values, and -if needed- realloc'ed to the needed size */
+	char configfile[1025];
 
-short int *dit_buf;
-short int *dah_buf;
-short int *inpcm;
-unsigned char *mp3buffer;
+	char id3_author[80],
+		id3_title[80],
+		id3_comment[80],
+		id3_year[5];
 
-int inpcm_size;
-int mp3buffer_size;
+	FILE *outfile;
+} CWP;
 
-int ditlen=0;				/* number of samples in a 'dit' */
-
-/* Chapters are split by this string */
-char chapterstr[80]="CHAPTER";
-char chapterfilename[80]="Chapter";		/* full filename: Chapter%04d.mp3 */
-
-
-/* Character encoding, mapping, etc */
-int encoding = ISO8859;
-char isomapindex[256];					/* contains the chars to be mapped */
-int utf8mapindex[256];					/* for utf8 as decimal code */
-char isomap[256][4]; 					/* by these strings */
-char utf8map[256][8]; 
-int use_isomapping = 0;
-int use_utf8mapping = 0;
-
-/* Config file location */
-char configfile[1024] = "ebook2cw.conf";
-
-/* ID3-tag data: author and title */
-char id3_author[80]="CW audio book";
-char id3_title[80]="";
-char id3_comment[80]="";
-char id3_year[5]="";
 
 /* functions */
-int init_cw (int wpm, int freq, int rt, int ft);
+void init_cw (CWP *cw);
 void help (void);
 void showcodes (int i);
-void makeword(char * text);
-void closefile (int letter, int cw);
-void openfile (int chapter);
-void buf_check (int j);
-void command (char * cmd);
-void readconfig (void);
-void setparameter (char p, char * value);
-void loadmapping(char *filename, int enc);
-char *mapstring (char *string);
+void makeword(char * text, CWP *cw);
+void closefile (int letter, int chw, CWP *cw);
+void openfile (int chapter, CWP *cw);
+void buf_check (int j, CWP *cw);
+void command (char * cmd, CWP *cw);
+void readconfig (CWP *cw);
+void setparameter (char p, char * value, CWP *cw);
+void loadmapping(char *filename, int enc, CWP *cw);
+char *mapstring (char *string, CWP *cw);
 
 /* main */
 
 int main (int argc, char** argv) {
-	int pos, i, original_wpm;
+	int pos, i;
 	int c;
  	char word[1024]="";				/* will be cut when > 1024 chars long */
 	int chapter = 0;
-	int cw = 0, tw = 0, qw = 0;		/* chapter words, total words, qrq words */
+	int chw = 0, tw = 0, qw = 0;	/* chapter words, total words, qrq words */
+	FILE *infile;
+
+	/* initializing the CW parameter struct with standard values */
+	CWP cw;
+	cw.wpm = 25;
+	cw.freq = 600;
+	cw.rt = 50;
+	cw.ft = 50;
+	cw.qrq = 0;
+	cw.reset = 1;
+	cw.farnsworth = 0;
+	cw.ews = 0.0;
+	cw.pBT = 1;
+	cw.waveform = SINE;
+
+	cw.samplerate = 11025;
+	cw.brate = 16;
+	cw.quality = 5;
+	
+	cw.inpcm_size = PCMBUFFER;
+	cw.mp3buffer_size = MP3BUFFER;
+	cw.ditlen = 0;
+	strcpy(cw.chapterstr, "CHAPTER");
+	strcpy(cw.chapterfilename, "Chapter");
+
+	cw.encoding = ISO8859;
+	cw.use_isomapping = cw.use_utf8mapping = 0;
+
+	strcpy(cw.configfile, "ebook2cw.conf");
+
+	strcpy(cw.id3_author, "CW audio book");
+	strcpy(cw.id3_title, "");
+	strcpy(cw.id3_comment, "");
+	strcpy(cw.id3_year, "");
 
 	infile = stdin;
 
@@ -140,10 +168,10 @@ int main (int argc, char** argv) {
 	 * Find and read ebook2cw.conf 
 	 */
 
-	readconfig();
+	readconfig(&cw);
 
 	while((i=getopt(argc,argv, "o:w:W:e:f:uc:k:Q:R:pF:s:b:q:a:t:y:S:hnT:"))!= -1){
-		setparameter(i, optarg);
+		setparameter(i, optarg, &cw);
 	} /* while */
 
 	if (optind < argc) {		/* something left? if so, use as infile */
@@ -159,10 +187,10 @@ int main (int argc, char** argv) {
 	/* init lame */
 	gfp = lame_init();
 	lame_set_num_channels(gfp,1);
-	lame_set_in_samplerate(gfp, samplerate);
-	lame_set_brate(gfp, brate);
+	lame_set_in_samplerate(gfp, cw.samplerate);
+	lame_set_brate(gfp, cw.brate);
 	lame_set_mode(gfp,1);
-	lame_set_quality(gfp, quality); 
+	lame_set_quality(gfp, cw.quality); 
 	
 	if (lame_init_params(gfp) < 0) {
 		fprintf(stderr, "Failed: lame_init_params(gfp) \n");
@@ -171,40 +199,40 @@ int main (int argc, char** argv) {
 
 	/* init pcm_buf and mp3_buf */
 
-	if ((inpcm = calloc(PCMBUFFER, sizeof(short int))) == NULL) {
+	if ((cw.inpcm = calloc(PCMBUFFER, sizeof(short int))) == NULL) {
 		fprintf(stderr, "Error: Can't allocate inpcm[%d]!\n", PCMBUFFER);
 		exit(EXIT_FAILURE);
 	}
 	else {
-		inpcm_size = PCMBUFFER;
+		cw.inpcm_size = PCMBUFFER;
 	}
 
-	if ((mp3buffer = calloc(MP3BUFFER, sizeof(unsigned char))) == NULL) {
+	if ((cw.mp3buffer = calloc(MP3BUFFER, sizeof(unsigned char))) == NULL) {
 		fprintf(stderr, "Error: Can't allocate mp3buffer[%d]!\n", MP3BUFFER);
 		exit(EXIT_FAILURE);
 	}
 	else {
-		mp3buffer_size = MP3BUFFER;
+		cw.mp3buffer_size = MP3BUFFER;
 	}
 
-	printf("Speed: %dwpm, Freq: %dHz, Chapter: >%s<, Encoding: %s\n", 
-		wpm, freq, chapterstr, encoding == UTF8 ? "UTF-8" : "ISO 8859-1");
+	printf("Speed: %dwpm, Freq: %dHz, Chapter: >%s<, Encoding: %s\n", cw.wpm, 
+		cw.freq, cw.chapterstr, cw.encoding == UTF8 ? "UTF-8" : "ISO 8859-1");
 
-	printf("Effective speed: %dwpm, ", farnsworth ? farnsworth : wpm);
-	printf("Extra word spaces: %1.1f, ", ews);
-	printf("QRQ: %dmin, reset QRQ: %s\n\n", qrq, reset ? "yes" : "no");
+	printf("Effective speed: %dwpm, ", cw.farnsworth ? cw.farnsworth : cw.wpm);
+	printf("Extra word spaces: %1.1f, ", cw.ews);
+	printf("QRQ: %dmin, reset QRQ: %s\n\n", cw.qrq, cw.reset ? "yes" : "no");
 
-	ditlen = init_cw(wpm, freq, rt, ft);	/* generate raw dit, dah */
+	init_cw(&cw);	/* generate raw dit, dah */
 
-	strcat(chapterstr, " ");
+	strcat(cw.chapterstr, " ");
 
 	/* read STDIN, assemble full words (anything ending in ' ') to 'word' and
 	 * generate CW, write to file by 'makeword'. words with > 1024 characters
 	 * will be split  */
 
-	original_wpm = wpm;					/* may be changed by QRQing */
+	cw.original_wpm = cw.wpm;					/* may be changed by QRQing */
 	chapter = 0;
-	openfile(chapter);
+	openfile(chapter, &cw);
 
 	pos=0;
 	while ((c = getc(infile)) != EOF) {
@@ -216,37 +244,37 @@ int main (int argc, char** argv) {
 		
 		if ((c == ' ') || (c == '\n') || (pos == 1024)) {
 			word[pos] = '\0';
-			if (strcmp(chapterstr, word) == 0) {	/* new chapter */
-				closefile(chapter, cw);
-				cw = 0;
+			if (strcmp(cw.chapterstr, word) == 0) {	/* new chapter */
+				closefile(chapter, chw, &cw);
+				chw = 0;
 				chapter++;
 		
-				if (qrq && reset) {	
-					wpm = original_wpm;	
-					ditlen = init_cw(wpm, freq, rt, ft);
+				if (cw.qrq && cw.reset) {	
+					cw.wpm = cw.original_wpm;	
+					init_cw(&cw);
 					qw = 0;
 				}
 					
-				openfile(chapter);
+				openfile(chapter, &cw);
 			}
 
 			/* check for commands: |f or |w */
 			if (word[0] == '|') {
-				command(word);
+				command(word, &cw);
 			}
 			else {
-				makeword(mapstring(word));
-				cw++; tw++; qw++;
+				makeword(mapstring(word, &cw), &cw);
+				chw++; tw++; qw++;
 			}
 
 			word[0] = '\0';
 			pos = 0;
 
 			/* Every 'qrq' minutes (qrq*wpm words), speed up 1 WpM */
-			if (qw == (qrq*wpm)) {
-				wpm += 1;
-				ditlen = init_cw(wpm, freq, rt, ft);
-				printf("QRQ: %dwpm\n", wpm);
+			if (qw == (cw.qrq*cw.wpm)) {
+				cw.wpm += 1;
+				init_cw(&cw);
+				printf("QRQ: %dwpm\n", cw.wpm);
 				qw = 0;
 			}
 
@@ -254,13 +282,13 @@ int main (int argc, char** argv) {
 
 	} /* eof */
 
-	closefile(chapter, cw);
+	closefile(chapter, chw, &cw);
 
-	free(mp3buffer);
-	free(inpcm);
+	free(cw.mp3buffer);
+	free(cw.inpcm);
 
 	/* factor 0.9 due to many 'words' which aren't actually words, like '\n' */
-	printf("Total words: %d, total time: %d min\n", tw, (int) ((tw/wpm)*0.9));
+	printf("Total words: %d, total time: %d min\n", tw, (int) ((tw/cw.wpm)*0.9));
 
 	lame_close(gfp);
 
@@ -273,32 +301,33 @@ int main (int argc, char** argv) {
 
 /* init_cw  -  generates a dit and a dah to dit_buf and dah_buf */
 
-int init_cw (int wpm, int freq, int rt, int ft) {
+void init_cw (CWP *cw) {
 	int x, len;
 	double val;
 
 	/* set farnsworth to samples */
-	if (farnsworth) {
+	if (cw->farnsworth) {
 
-		if (farnsworth > wpm) {
+		if (cw->farnsworth > cw->wpm) {
 			fprintf(stderr, "Error: Effective speed (-e %d) must be lower "
-							"than character speed (-w %d)!\n", farnsworth, wpm);
+							"than character speed (-w %d)!\n", cw->farnsworth, 
+							cw->wpm);
 			exit(EXIT_FAILURE);
 		}
 
 
-		farnsworth = (int) (6.0*samplerate/(5.0*farnsworth));
+		cw->farnsworth = (int) (6.0*cw->samplerate/(5.0*cw->farnsworth));
 	}
 
 	/*	printf("Initializing CW buffers at %d WpM: ", wpm); */
 
 	/* dah */
-	len = (int) (3.0*6.0*samplerate/(5.0*wpm));			/* in samples */
+	len = (int) (3.0*6.0*cw->samplerate/(5.0*cw->wpm));			/* in samples */
 
 	/* ditlen not set == init_cw has not been called yet */
-	if (!ditlen) {
+	if (!cw->ditlen) {
 		/* allocate memory for the buffer */
-		if ((dah_buf = calloc(len, sizeof(short int))) == NULL) {
+		if ((cw->dah_buf = calloc(len, sizeof(short int))) == NULL) {
 			fprintf(stderr, "Error: Can't allocate dah_buf[%d]\n", len);
 			exit(EXIT_FAILURE);
 		}
@@ -306,36 +335,35 @@ int init_cw (int wpm, int freq, int rt, int ft) {
 
 	for (x=0; x < len; x++) {
 
-		switch (waveform) {
+		switch (cw->waveform) {
 			case SINE:
-				val = sin(2*M_PI*freq*x/samplerate);
+				val = sin(2*M_PI*cw->freq*x/cw->samplerate);
 				break;
 			case SAWTOOTH:
-				val=((1.0*freq*x/samplerate)-floor(1.0*freq*x/samplerate))-0.5;
+				val=((1.0*cw->freq*x/cw->samplerate)-
+								floor(1.0*cw->freq*x/cw->samplerate))-0.5;
 				break;
 			case SQUARE:
-				val = ceil(sin(2*M_PI*freq*x/samplerate))-0.5;
+				val = ceil(sin(2*M_PI*cw->freq*x/cw->samplerate))-0.5;
 				break;
 		}
 
-		if (x < rt)  			/* shaping with sin^2 */
-				val *= pow(sin(M_PI*x/(2.0*rt)),2);
+		if (x < cw->rt)  			/* shaping with sin^2 */
+				val *= pow(sin(M_PI*x/(2.0*cw->rt)),2);
 		
-		if (x > (len-ft)) 
-				val *= pow((sin(2*M_PI*(x-(len-ft)+ft)/(4*ft))), 2);
+		if (x > (len-cw->ft)) 
+				val *= pow((sin(2*M_PI*(x-(len-cw->ft)+cw->ft)/(4*cw->ft))), 2);
 		
-		dah_buf[x] = (short int) (val * 20000.0);
+		cw->dah_buf[x] = (short int) (val * 20000.0);
 	}
 
-	/*	printf("dah_buf[%d], ", x); */
-
 	/* dit */
-	len = (int) (6.0*samplerate/(5.0*wpm));			/* in samples */
+	len = (int) (6.0*cw->samplerate/(5.0*cw->wpm));			/* in samples */
 
 	/* ditlen not set == init_cw has not been called yet */
-	if (!ditlen) {
+	if (!cw->ditlen) {
 		/* allocate memory for the buffer */
-		if ((dit_buf = calloc(len, sizeof(short int))) == NULL) {
+		if ((cw->dit_buf = calloc(len, sizeof(short int))) == NULL) {
 			fprintf(stderr, "Error: Can't allocate dit_buf[%d]\n", len);
 			exit(EXIT_FAILURE);
 		}
@@ -343,30 +371,30 @@ int init_cw (int wpm, int freq, int rt, int ft) {
 
 	for (x=0; x < len; x++) {
 
-		switch (waveform) {
+		switch (cw->waveform) {
 			case SINE:
-				val = sin(2*M_PI*freq*x/samplerate);
+				val = sin(2*M_PI*cw->freq*x/cw->samplerate);
 				break;
 			case SAWTOOTH:
-				val=((1.0*freq*x/samplerate)-floor(1.0*freq*x/samplerate))-0.5;
+				val=((1.0*cw->freq*x/cw->samplerate)-floor(1.0*cw->freq*x/cw->samplerate))-0.5;
 				break;
 			case SQUARE:
-				val = ceil(sin(2*M_PI*freq*x/samplerate))-0.5;
+				val = ceil(sin(2*M_PI*cw->freq*x/cw->samplerate))-0.5;
 				break;
 		}
 
-		if (x < rt)  
-			val *= pow(sin(M_PI*x/(2.0*rt)), 2); 
+		if (x < cw->rt)  
+			val *= pow(sin(M_PI*x/(2.0*cw->rt)), 2); 
 		
-		if (x > (len-ft)) 
-			val *= pow((sin(2*M_PI*(x-(len-ft)+ft)/(4*ft))), 2);
+		if (x > (len-cw->ft)) 
+			val *= pow((sin(2*M_PI*(x-(len-cw->ft)+cw->ft)/(4*cw->ft))), 2);
 		
-		dit_buf[x] = (short int) (val * 20000.0);
+		cw->dit_buf[x] = (short int) (val * 20000.0);
 	}
 	
-	/* printf("dit_buf[%d]\n\n", x); */
+	cw->ditlen = x;
 
-	return x;		/* = length of dit/silence */
+	return;
 }
 
 
@@ -376,7 +404,7 @@ int init_cw (int wpm, int freq, int rt, int ft) {
 /* makeword  --  converts 'text' to CW by concatenating dit_buf amd dah_bufs,
  * encodes this to MP3 and writes to open filehandle outfile */
 
-void makeword(char * text) {
+void makeword(char * text, CWP *cw) {
  const char *code;				/* CW code as . and - */
  int outbytes;
 
@@ -391,7 +419,7 @@ void makeword(char * text) {
 	code = NULL;
 
 	if (c == '\n') { 				/* Same for UTF8 and ISO8859 */
-		if ((strlen(text) == 1) && pBT) 	/* paragraph */
+		if ((strlen(text) == 1) && cw->pBT) 	/* paragraph */
 			code = " -...- "; 
 		else 
 			code = " ";
@@ -404,10 +432,10 @@ void makeword(char * text) {
 		prosign = 0;
 		code = "";			/* only inserts letter space */
 	}
-	else if (encoding == ISO8859) {	
+	else if (cw->encoding == ISO8859) {	
 		code = iso8859[c];
 	}
-	else if (encoding == UTF8) {
+	else if (cw->encoding == UTF8) {
 		/* Character may be 1-byte ASCII or 2-byte UTF8 */
 		if (!(c & 128)) {						/* MSB = 0 -> 7bit ASCII */
 			code = iso8859[c];					/* subset of iso8859 */
@@ -446,41 +474,40 @@ void makeword(char * text) {
 		/* make sure the inpcm buffer doesn't run full,
 		 * with a conservative margin. reallocate memory if neccesary */
 
-		buf_check(j);
-
+		buf_check(j, cw);
 
 		c = code[w];
 
 		if (c == '.') 
-			for (u=0; u < ditlen; u++)
-					inpcm[++j] = dit_buf[u]; 
+			for (u=0; u < cw->ditlen; u++)
+					cw->inpcm[++j] = cw->dit_buf[u]; 
 		else if (c == '-') 
-			for (u=0; u < (3*ditlen); u++)
-					inpcm[++j] = dah_buf[u]; 
+			for (u=0; u < (3*cw->ditlen); u++)
+					cw->inpcm[++j] = cw->dah_buf[u]; 
 		else 								/* word space */
-			for (u=0;u < (int)(1+7*ews)*(farnsworth ? farnsworth : ditlen); u++)
-					inpcm[++j] = 0; 
+			for (u=0;u < (int)(1+7*cw->ews)*(cw->farnsworth ? cw->farnsworth : cw->ditlen); u++)
+					cw->inpcm[++j] = 0; 
 	
-		for (u=0; u < ditlen; u++)	/* space of one dit length */
-				inpcm[++j] = 0; 
+		for (u=0; u < cw->ditlen; u++)	/* space of one dit length */
+				cw->inpcm[++j] = 0; 
 	}	/* foreach dot/dash */
 
 	if (prosign == 0) {
-		for (u=0; u < (farnsworth ? 3*farnsworth-ditlen : 2*ditlen); u++)
-			inpcm[++j] = 0; 
+		for (u=0; u < (cw->farnsworth ? 3*cw->farnsworth-cw->ditlen : 2*cw->ditlen); u++)
+			cw->inpcm[++j] = 0; 
 	}
 
  }	/* foreach letter */
 
  /* j = total length of samples in 'inpcm' */
  
- outbytes = lame_encode_buffer(gfp, inpcm, inpcm, j, mp3buffer, mp3buffer_size);
+ outbytes = lame_encode_buffer(gfp, cw->inpcm, cw->inpcm, j, cw->mp3buffer, cw->mp3buffer_size);
  if (outbytes < 0) {
 	fprintf(stderr, "Error: lame_encode_buffer returned %d. Exit.\n", outbytes);
 	exit(EXIT_FAILURE);
  }
 
- if (fwrite(mp3buffer, sizeof(char), outbytes, outfile) != outbytes) {
+ if (fwrite(cw->mp3buffer, sizeof(char), outbytes, cw->outfile) != outbytes) {
 	fprintf(stderr, "Error: Writing %db to file failed. Exit.\n", outbytes);
 	exit(EXIT_FAILURE);
  }
@@ -490,28 +517,28 @@ void makeword(char * text) {
 
 /* closefile -- finishes writing the current file, flushes the encoder buffer */
 
-void closefile (int letter, int cw) {
+void closefile (int letter, int chw, CWP *cw) {
  int outbytes;
  char mp3filename[80] = "";
 
- printf("words: %d, minutes: %d\n", cw, (int) ((cw/wpm)*0.9));
+ printf("words: %d, minutes: %d\n", chw, (int) ((chw/cw->wpm)*0.9));
 
- snprintf(mp3filename, 80, "%s%04d.mp3",  chapterfilename, letter);
+ snprintf(mp3filename, 80, "%s%04d.mp3",  cw->chapterfilename, letter);
  printf("Finishing %s\n\n",  mp3filename);
 
- outbytes = lame_encode_flush(gfp, mp3buffer, mp3buffer_size);
+ outbytes = lame_encode_flush(gfp, cw->mp3buffer, cw->mp3buffer_size);
  
  if (outbytes < 0) {
 	fprintf(stderr, "Error: lame_encode_buffer returned %d.\n", outbytes);
 	exit(EXIT_FAILURE);
  }
 
- if (fwrite(mp3buffer, sizeof(char), outbytes, outfile) != outbytes) {
+ if (fwrite(cw->mp3buffer, sizeof(char), outbytes, cw->outfile) != outbytes) {
 	fprintf(stderr, "Error: Writing %db to file failed. Exit.\n", outbytes);
 	exit(EXIT_FAILURE);
  }
 
- fclose(outfile);
+ fclose(cw->outfile);
 }
 
 
@@ -520,25 +547,25 @@ void closefile (int letter, int cw) {
 
 /* openfile -- starts a new chapter by opening a new file as outfile */
 
-void openfile (int chapter) {
+void openfile (int chapter, CWP *cw) {
 	char mp3filename[80] = "";
 	static char tmp[80] = "";
 
-	snprintf(mp3filename, 80, "%s%04d.mp3",  chapterfilename, chapter);
+	snprintf(mp3filename, 80, "%s%04d.mp3",  cw->chapterfilename, chapter);
 	printf("Starting %s\n",  mp3filename);
  
-	if ((outfile = fopen(mp3filename, "wb")) == NULL) {
+	if ((cw->outfile = fopen(mp3filename, "wb")) == NULL) {
 		fprintf(stderr, "Error: Failed to open %s\n", mp3filename);
 		exit(EXIT_FAILURE);
 	}
 
-	snprintf(tmp, 79, "%s - %d", id3_title, chapter);	/* generate title */
+	snprintf(tmp, 79, "%s - %d", cw->id3_title, chapter);	/* generate title */
 
 	id3tag_init(gfp);
-	id3tag_set_artist(gfp, id3_author);
-	id3tag_set_year(gfp, id3_year);
+	id3tag_set_artist(gfp, cw->id3_author);
+	id3tag_set_year(gfp, cw->id3_year);
 	id3tag_set_title(gfp, tmp);
-	id3tag_set_comment(gfp, id3_comment);
+	id3tag_set_comment(gfp, cw->id3_comment);
 
 }
 
@@ -603,27 +630,27 @@ void showcodes (int i) {
 /* make sure the inpcm-buffer doesn't run full.
  * have to consider the effects of Farnsworth and extra word spacing */
 
-void buf_check (int j) {
+void buf_check (int j, CWP *cw) {
 	int max;
 
 	/* maximum bytes that may be added for one dot or dah, for either
 	 * farnsworth or non-farnsworth */
 
-	max = farnsworth ? (int) ((4+7*ews)*(farnsworth)) : (6+7*ews) * ditlen;
+	max = cw->farnsworth ? (int) ((4+7*cw->ews)*(cw->farnsworth)) : (6+7*cw->ews) * cw->ditlen;
 	max += 10000;			/* some margin to feel safe ... */
 
-	if (j > inpcm_size - max) {
-			inpcm_size +=  max;
-			mp3buffer_size +=  (int) (1.25 * max + 7200.0);
-			if ((inpcm = realloc(inpcm, inpcm_size*sizeof(short int)))== NULL) {
-				fprintf(stderr, "Error: Can't realloc inpcm[%d]\n", inpcm_size);
+	if (j > cw->inpcm_size - max) {
+			cw->inpcm_size +=  max;
+			cw->mp3buffer_size +=  (int) (1.25 * max + 7200.0);
+			if ((cw->inpcm = realloc(cw->inpcm, cw->inpcm_size*sizeof(short int)))== NULL) {
+				fprintf(stderr, "Error: Can't realloc inpcm[%d]\n", cw->inpcm_size);
 				exit(EXIT_FAILURE);
 			}
 			
-			if ((mp3buffer = realloc(mp3buffer, mp3buffer_size*sizeof(char))) 
+			if ((cw->mp3buffer = realloc(cw->mp3buffer, cw->mp3buffer_size*sizeof(char))) 
 						   	== NULL) {
 				fprintf(stderr, "Error: Can't realloc mp3buffer[%d]\n", 
-								mp3buffer_size);
+								cw->mp3buffer_size);
 				exit(EXIT_FAILURE);
 			}
 		}
@@ -635,7 +662,7 @@ void buf_check (int j) {
  * to change speed or tone freq.
  */
 
-void command (char * cmd) {
+void command (char * cmd, CWP *cw) {
 
 	int i = 0;
 	unsigned char c = 0;
@@ -644,33 +671,33 @@ void command (char * cmd) {
 
 	switch (c) {
 		case 'f':
-			if ((i > 100) && (i < (int) samplerate/2)) {
-				freq = i;
-				init_cw(wpm, freq, rt, ft);
+			if ((i > 100) && (i < (int) cw->samplerate/2)) {
+				cw->freq = i;
+				init_cw(cw);
 			}
 			else 
 				fprintf(stderr, "Invalid frequency: %s. Ignored.\n", cmd);
 			break;
 		case 'w':
 			if (i > 1) {
-				wpm = i;
-				ditlen = init_cw(wpm, freq, rt, ft);
+				cw->wpm = i;
+				init_cw(cw);
 			}
 			else 
 				fprintf(stderr, "Invalid speed: %s. Ignored.\n", cmd);
 			break;
 		case 'e':
 			if (i > 1) {
-				farnsworth = i;
-				ditlen = init_cw(wpm, freq, rt, ft);
+				cw->farnsworth = i;
+				init_cw(cw);
 			}
 			else 
 				fprintf(stderr, "Invalid speed: %s. Ignored.\n", cmd);
 			break;
 		case 'T':
 			if (i > 0 && i < 3) {
-				waveform = i;
-				init_cw(wpm, freq, rt, ft);
+				cw->waveform = i;
+				init_cw(cw);
 			}
 			else 
 				fprintf(stderr, "Invalid waveform: %d. Ignored.\n", i);
@@ -692,7 +719,7 @@ void command (char * cmd) {
  * A sample config `ebook2cw.conf' is included.
  */
 
-void readconfig (void) {
+void readconfig (CWP *cw) {
 	FILE *conf = NULL;
 	char tmp[1024] = "";
 	char p;					/* parameter */
@@ -701,15 +728,15 @@ void readconfig (void) {
 	char *homedir = NULL;
 	int j=0;
 
-	if ((conf = fopen(configfile, "r")) == NULL) {
+	if ((conf = fopen(cw->configfile, "r")) == NULL) {
 		/* ebook2cw.conf not in current directory */
 		if ((homedir = getenv("HOME")) == NULL) {	/* no home or Windows */
 			return;
 		}
 #if !__MINGW32__
 		/* Linux/Unix: Look for ~/.ebook2cw/ebook2cw.conf */
-		snprintf(configfile, 2048, "%s/.ebook2cw/ebook2cw.conf", homedir);
-		if ((conf = fopen(configfile, "r")) == NULL) {
+		snprintf(cw->configfile, 2048, "%s/.ebook2cw/ebook2cw.conf", homedir);
+		if ((conf = fopen(cw->configfile, "r")) == NULL) {
 			/* Not in ~/.ebook2cw/ either, look for it in
 			 * DESTDIR/ebook2cw/examples/ */
 			if ((conf = fopen(DESTDIR
@@ -756,13 +783,13 @@ void readconfig (void) {
 
 				/* Succcess. files installed to ~/.ebook2cw/ */
 
-				snprintf(configfile, 1024, "%s/.ebook2cw/ebook2cw.conf",
+				snprintf(cw->configfile, 1024, "%s/.ebook2cw/ebook2cw.conf",
 								homedir);
 
 				/* open newly installed config file ... */
-				if ((conf = fopen(configfile, "r")) == NULL) {
+				if ((conf = fopen(cw->configfile, "r")) == NULL) {
 					printf("Couldn't read %s! Continue without config.",
-									configfile);
+									cw->configfile);
 					return;
 				}
 
@@ -771,7 +798,7 @@ void readconfig (void) {
 #endif
 	}
 
-	printf("Reading configuration file: %s\n\n", configfile);
+	printf("Reading configuration file: %s\n\n", cw->configfile);
 
 	/* We start in the [settings] section.
 	 * All settings are ^[a-zA-Z]=.+$ 
@@ -784,7 +811,7 @@ void readconfig (void) {
 		}
 		else {
 			if (sscanf(tmp, "%c=%s", &p, v) == 2) {
-				setparameter(p, v);
+				setparameter(p, v, cw);
 			}
 		}
 	}
@@ -795,68 +822,68 @@ void readconfig (void) {
 	while ((feof(conf) == 0) && (fgets(tmp, 80, conf) != NULL)) {
 		tmp[strlen(tmp)-1]='\0';
 		if (sscanf(tmp, "isomapfile=%255s", mapfile) == 1) {
-				loadmapping(mapfile, ISO8859);
+				loadmapping(mapfile, ISO8859, cw);
 		}
 		else if (sscanf(tmp, "utf8mapfile=%255s", mapfile) == 1) {
-				loadmapping(mapfile, UTF8);
+				loadmapping(mapfile, UTF8, cw);
 		}
 	}
 }
 
 
-void setparameter (char i, char *value) {
+void setparameter (char i, char *value, CWP *cw) {
 
 		switch (i) {
 			case 'w':
-				if ((wpm = atoi(value)) < 1) {
+				if ((cw->wpm = atoi(value)) < 1) {
 					fprintf(stderr, "Error: Speed (-w) must be > 0!\n");
 					exit(EXIT_FAILURE);
 				}
 				break;
 			case 'f':
-				freq = atoi(value);
+				cw->freq = atoi(value);
 				break;
 			case 'R':
-				rt = atoi(value);
+				cw->rt = atoi(value);
 				break;
 			case 'F':
-				ft = atoi(value);
+				cw->ft = atoi(value);
 				break;
 			case 's':
-				samplerate = atoi(value);
+				cw->samplerate = atoi(value);
 				break;
 			case 'b':
-				brate = atoi(value);
+				cw->brate = atoi(value);
 				break;
 			case 'q':
-				quality = atoi(value);
+				cw->quality = atoi(value);
 				break;
 			case 'c':
-				strncpy(chapterstr, value, 78);
+				strncpy(cw->chapterstr, value, 78);
 				break;
 			case 'o':
-				strncpy(chapterfilename, value, 78);
+				strncpy(cw->chapterfilename, value, 78);
 				break;
 			case 'a':
-				strncpy(id3_author, value, 78);
+				strncpy(cw->id3_author, value, 78);
 				break;
 			case 't':
-				strncpy(id3_title, value, 75);
+				strncpy(cw->id3_title, value, 75);
 				break;
 			case 'k':
-				strncpy(id3_comment, value, 78);
+				strncpy(cw->id3_comment, value, 78);
 				break;
 			case 'y':
-				strncpy(id3_year, value, 4);
+				strncpy(cw->id3_year, value, 4);
 				break;
 			case 'Q':
-				if ((qrq = atoi(value)) < 1) {
+				if ((cw->qrq = atoi(value)) < 1) {
 					fprintf(stderr, "Error: QRQ time (-Q) must be > 0!\n");
 					exit(EXIT_FAILURE);
 				}
 				break;
 			case 'u':
-				encoding = UTF8;
+				cw->encoding = UTF8;
 				break;
 			case 'S':
 				if (strstr(value, "ISO")) {
@@ -867,32 +894,32 @@ void setparameter (char i, char *value) {
 				}
 				break;
 			case 'e':				/* effective speed in WpM */
-				if ((farnsworth = atoi(value)) < 1) {
+				if ((cw->farnsworth = atoi(value)) < 1) {
 					fprintf(stderr, "Error: Eff. speed (-e) must be > 0!\n");
 					exit(EXIT_FAILURE);
 				}
 				break;
 			case 'W':
-				ews = atof(value);
+				cw->ews = atof(value);
 				break;
 			case 'n':
-				reset = 0;
+				cw->reset = 0;
 				break;
 			case 'p':
-				pBT = 0;
+				cw->pBT = 0;
 				break;
 			case 'h':
 				help();
 				break;
 			case 'T':
 				if (strstr(value, "SINE") || atoi(value) == 1) {
-					waveform = SINE;
+					cw->waveform = SINE;
 				}
 				else if (strstr(value, "SAWTOOTH") || atoi(value) == 2) {
-					waveform = SAWTOOTH;
+					cw->waveform = SAWTOOTH;
 				}
 				else if (strstr(value, "SQUARE") || atoi(value) == 3) {
-					waveform = SQUARE;	
+					cw->waveform = SQUARE;	
 				}
 				break;
 		} /* switch */
@@ -908,7 +935,7 @@ void setparameter (char i, char *value) {
  * */
 
 
-void loadmapping(char *file, int enc) {
+void loadmapping(char *file, int enc, CWP *cw) {
 	FILE *mp;
 	char tmp[81] = "";
 	int i=0;
@@ -925,12 +952,12 @@ void loadmapping(char *file, int enc) {
 
 	switch (enc) {
 			case ISO8859:
-				memset(isomapindex, 0, sizeof(char)*256);
-				use_isomapping = 1;
+				memset(cw->isomapindex, 0, sizeof(char)*256);
+				cw->use_isomapping = 1;
 				break;
 			case UTF8:
-				memset(utf8mapindex, 0, sizeof(int)*256);
-				use_utf8mapping = 1;
+				memset(cw->utf8mapindex, 0, sizeof(int)*256);
+				cw->use_utf8mapping = 1;
 				break;
 	}
 
@@ -941,21 +968,21 @@ void loadmapping(char *file, int enc) {
 		switch (enc) {
 			case ISO8859:
 				if (sscanf(tmp, "%c=%3s", &c1, s) == 2) {
-					isomapindex[i] = c1;
-					strncpy(isomap[i], s, 3);
+					cw->isomapindex[i] = c1;
+					strncpy(cw->isomap[i], s, 3);
 					i++;
 				}	
 				break;
 			case UTF8:
 				if (sscanf(tmp, "%c=%5s", &c1, s) == 2) {
-						utf8mapindex[i] = c1;
-						strncpy(utf8map[i], s, 5);
+						cw->utf8mapindex[i] = c1;
+						strncpy(cw->utf8map[i], s, 5);
 						i++;
 				}
 				else if (sscanf(tmp, "%c%c=%5s", &c1, &c2, s) == 3) {
 						k = ((c1 & 31) << 6) | (c2 & 63);	/* decimal */
-						utf8mapindex[i] = k;				/* unicode char */
-						strncpy(utf8map[i], s, 5);
+						cw->utf8mapindex[i] = k;			/* unicode char */
+						strncpy(cw->utf8map[i], s, 5);
 						i++;
 				}
 				break;
@@ -979,7 +1006,7 @@ void loadmapping(char *file, int enc) {
  */
 
 
-char *mapstring (char * string) {
+char *mapstring (char * string, CWP *cw) {
 	static char new[2048]="";
 	char c;
 	int i, j, replaced;
@@ -987,19 +1014,19 @@ char *mapstring (char * string) {
 
 	memset(new, 0, 2048);
 	
-	switch (encoding) {
+	switch (cw->encoding) {
 		case ISO8859:
-			if (!use_isomapping) {
+			if (!cw->use_isomapping) {
 				return string;
 			}
 			while ((c = *string++) != '\0') {
 				replaced = 0;
 				for (i=0; i < 255; i++) {
-					if (isomapindex[i] == 0) {
+					if (cw->isomapindex[i] == 0) {
 						break;
 					}
-					else if (isomapindex[i] == c) {
-						strcat(new, isomap[i]);
+					else if (cw->isomapindex[i] == c) {
+						strcat(new, cw->isomap[i]);
 						replaced = 1;
 						break;
 					}
@@ -1010,7 +1037,7 @@ char *mapstring (char * string) {
 			}
 		break;
 		case UTF8:
-			if (!use_utf8mapping) {
+			if (!cw->use_utf8mapping) {
 				return string;
 			}
 			while ((c = *string++) != '\0') {
@@ -1028,11 +1055,11 @@ char *mapstring (char * string) {
 					j = c;
 				}
 				for (i=0; i < 255; i++) {
-					if (utf8mapindex[i] == 0) {
+					if (cw->utf8mapindex[i] == 0) {
 						break;
 					}
-					else if (utf8mapindex[i] == j) {
-						strcat(new, utf8map[i]);
+					else if (cw->utf8mapindex[i] == j) {
+						strcat(new, cw->utf8map[i]);
 						replaced = 1;
 						break;
 					}

@@ -1,3 +1,9 @@
+0.7.1 /              Fabian Kurz   <mail@fkurz.net>
+	* Waveform can now be set to sine, sawtooth or squarewave.
+	* Config files are searched in current directory, ~/.ebook2cw,
+	  and DESTDIR/share/doc/ebook2cw/examples now. ~/.ebook2cw is
+	  created if only the last is found. [Linux/Unix only]
+
 0.7.0 / 2008-07-03   Fabian Kurz   <mail@fkurz.net>
 	* Paragraph separator (<BT>) can be disabled by
 	  -p command line switch (suggested by DJ3KU).
