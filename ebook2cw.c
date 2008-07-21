@@ -58,35 +58,37 @@ lame_global_flags *gfp;
 
 typedef struct {
 	/* CW parameters */
-	int wpm, 
-		freq, 
-		rt, 
-		ft, 
-		qrq,
-		reset, 
-		farnsworth, 
-		pBT, 
-		waveform, 
-		original_wpm;
-	float ews;	
-	/* mp3, buffers */
+	int wpm, 					/* speed, words per minute */
+		freq, 					/* audio frequency in Hz */
+		rt, 					/* risetime, in samples */
+		ft, 					/* falltime, in samples */
+		qrq,					/* increase speed each qrq minutes */
+		reset, 					/* reset qrq each chapter? */
+		farnsworth, 			/* effective, farnsworth speed */
+		pBT, 					/* sent <BT> for each paragraph? */
+		waveform, 				/* waveform, sine(1), sawtooth(2), square(3) */
+		original_wpm,			/* starting speed; if qrq is used */
+		wordspace,				/* wordspace in samples, depends on Farnsworth*/
+		letterspace;			/* inter-letter space */
+	float ews;					/* extra word space */
+	/* mp3 parameters, buffers */
 	int samplerate,
 		brate,
 		quality;
 	int inpcm_size,
 		mp3buffer_size,
-		ditlen,								/* normal dit length in samples */
-		fditlen,							/* farnsworth ditlen in samples */
-		maxbytes;
+		ditlen,					/* normal dit length in samples */
+		fditlen,				/* farnsworth ditlen in samples */
+		maxbytes;				/* may bytes of a 'dah' */
 	short int *dit_buf,
 			*dah_buf,
 			*inpcm;
 	unsigned char *mp3buffer;
 	/* Chapter splitting */
-	char chapterstr[80], 
+	char chapterstr[80], 		/* split chapters by this string */
 		 chapterfilename[80];
 	/* encoding and mapping */
-	int encoding,
+	int encoding,				/* ISO8859 or UTF8 */
 		use_isomapping,
 		use_utf8mapping;
 	char isomapindex[256];		/* contains the chars to be mapped */
@@ -112,6 +114,7 @@ void showcodes (int i);
 void makeword(char * text, CWP *cw);
 void closefile (int letter, int chw, CWP *cw);
 void openfile (int chapter, CWP *cw);
+void buf_alloc (CWP *cw);
 void buf_check (int j, CWP *cw);
 void command (char * cmd, CWP *cw);
 void readconfig (CWP *cw);
@@ -174,7 +177,7 @@ int main (int argc, char** argv) {
 
 	while((i=getopt(argc,argv, "o:w:W:e:f:uc:k:Q:R:pF:s:b:q:a:t:y:S:hnT:"))!= -1){
 		setparameter(i, optarg, &cw);
-	} /* while */
+	} 
 
 	if (optind < argc) {		/* something left? if so, use as infile */
 		if ((argv[optind][0] != '-') && (argv[optind][0] != '\0')) {
@@ -199,23 +202,8 @@ int main (int argc, char** argv) {
 		return(1);
 	}
 
-	/* init pcm_buf and mp3_buf */
-
-	if ((cw.inpcm = calloc(PCMBUFFER, sizeof(short int))) == NULL) {
-		fprintf(stderr, "Error: Can't allocate inpcm[%d]!\n", PCMBUFFER);
-		exit(EXIT_FAILURE);
-	}
-	else {
-		cw.inpcm_size = PCMBUFFER;
-	}
-
-	if ((cw.mp3buffer = calloc(MP3BUFFER, sizeof(unsigned char))) == NULL) {
-		fprintf(stderr, "Error: Can't allocate mp3buffer[%d]!\n", MP3BUFFER);
-		exit(EXIT_FAILURE);
-	}
-	else {
-		cw.mp3buffer_size = MP3BUFFER;
-	}
+	/* Initially allocate inpcm, mp3buffer, dit_buf, dah_buf  */
+	buf_alloc(&cw);
 
 	printf("Speed: %dwpm, Freq: %dHz, Chapter: >%s<, Encoding: %s\n", cw.wpm, 
 		cw.freq, cw.chapterstr, cw.encoding == UTF8 ? "UTF-8" : "ISO 8859-1");
@@ -318,17 +306,16 @@ void init_cw (CWP *cw) {
 		cw->fditlen = (int) (6.0*cw->samplerate/(5.0*cw->farnsworth));
 	}
 
-	/* dah */
+	/* dit */
 	len = (int) (6.0*cw->samplerate/(5.0*cw->wpm));			/* in samples */
 
-	/* ditlen not set == init_cw has not been called yet */
-	if (!cw->ditlen) {
-		/* allocate memory for the buffer */
-		if ((cw->dah_buf = calloc(3*len, sizeof(short int))) == NULL) {
-			fprintf(stderr, "Error: Can't allocate dah_buf[%d]\n", len);
+	/* size of dit_buf, dah_buf may have to be increased, when speed decreased */
+	if (len > cw->ditlen) {
+		if ((cw->dah_buf = realloc(cw->dah_buf, 3*len * sizeof(short int))) == NULL) {
+			fprintf(stderr, "Error: Can't reallocate dah_buf[%d]\n", 3*len);
 			exit(EXIT_FAILURE);
 		}
-		if ((cw->dit_buf = calloc(len, sizeof(short int))) == NULL) {
+		if ((cw->dit_buf = realloc(cw->dit_buf, len * sizeof(short int))) == NULL) {
 			fprintf(stderr, "Error: Can't allocate dit_buf[%d]\n", len);
 			exit(EXIT_FAILURE);
 		}
@@ -370,6 +357,7 @@ void init_cw (CWP *cw) {
 		cw->dah_buf[x] = (short int) (val2 * 20000.0);
 	} /* for */
 	
+	cw->ditlen = len;
 
 	/* Calculate maximum number of bytes per 'dah' for the PCM stream,
 	 * this will be used later to check if the buffer runs full
@@ -382,9 +370,9 @@ void init_cw (CWP *cw) {
 		cw->maxbytes = (int) ((6+7.0*cw->ews) * len) + 10000;
 	}
 
-	printf("f=%d, w=%d, max=%d\n", cw->farnsworth, cw->wpm, cw->maxbytes);
-
-	cw->ditlen = len;
+	/* Calculate word space, letter space, considering EWS and farnsworth */
+	cw->wordspace =(int)(1+7*cw->ews)*(cw->farnsworth ? cw->fditlen : cw->ditlen);
+	cw->letterspace = (cw->farnsworth ? 3*cw->fditlen - cw->ditlen : 2*cw->ditlen);
 
 	return;
 }
@@ -465,7 +453,6 @@ void makeword(char * text, CWP *cw) {
 	
 		/* make sure the inpcm buffer doesn't run full,
 		 * with a conservative margin. reallocate memory if neccesary */
-
 		buf_check(j, cw);
 
 		c = code[w];
@@ -477,15 +464,15 @@ void makeword(char * text, CWP *cw) {
 			for (u=0; u < (3*cw->ditlen); u++)
 					cw->inpcm[++j] = cw->dah_buf[u]; 
 		else 								/* word space */
-			for (u=0;u < (int)(1+7*cw->ews)*(cw->farnsworth ? cw->fditlen : cw->ditlen); u++)
+			for (u=0;u < cw->wordspace; u++)
 					cw->inpcm[++j] = 0; 
 	
-		for (u=0; u < cw->ditlen; u++)	/* space of one dit length */
+		for (u=0; u < cw->ditlen; u++)
 				cw->inpcm[++j] = 0; 
 	}	/* foreach dot/dash */
 
 	if (prosign == 0) {
-		for (u=0; u < (cw->farnsworth ? 3*cw->fditlen - cw->ditlen : 2*cw->ditlen); u++)
+		for (u=0; u < cw->letterspace; u++)
 			cw->inpcm[++j] = 0; 
 	}
 
@@ -1068,6 +1055,34 @@ char *mapstring (char * string, CWP *cw) {
 
 
 
+void buf_alloc(CWP *cw) {
 
+	/* pcm and mp3 buffers will be increased later as needed, but the initial
+	 * values should be sufficient for most speeds and reasonably long words */
+	if ((cw->inpcm = calloc(PCMBUFFER, sizeof(short int))) == NULL) {
+		fprintf(stderr, "Error: Can't allocate inpcm[%d]!\n", PCMBUFFER);
+		exit(EXIT_FAILURE);
+	}
+	cw->inpcm_size = PCMBUFFER;
+
+	if ((cw->mp3buffer = calloc(MP3BUFFER, sizeof(unsigned char))) == NULL) {
+		fprintf(stderr, "Error: Can't allocate mp3buffer[%d]!\n", MP3BUFFER);
+		exit(EXIT_FAILURE);
+	}
+	cw->mp3buffer_size = MP3BUFFER;
+
+	/* Just give it one byte now. It will be reallocated everytime init_cw is
+	 * called, but to make it easy, allocate *something* to it now */
+	if ((cw->dah_buf = calloc(1, sizeof(short int))) == NULL) {
+		fprintf(stderr, "Error: Can't allocate dah_buf[1]!\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if ((cw->dit_buf = calloc(1, sizeof(short int))) == NULL) {
+		fprintf(stderr, "Error: Can't allocate dit_buf[1]!\n");
+		exit(EXIT_FAILURE);
+	}
+
+}
 
 
