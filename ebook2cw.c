@@ -75,7 +75,9 @@ typedef struct {
 		quality;
 	int inpcm_size,
 		mp3buffer_size,
-		ditlen;
+		ditlen,								/* normal dit length in samples */
+		fditlen,							/* farnsworth ditlen in samples */
+		maxbytes;
 	short int *dit_buf,
 			*dah_buf,
 			*inpcm;
@@ -303,44 +305,43 @@ int main (int argc, char** argv) {
 
 void init_cw (CWP *cw) {
 	int x, len;
-	double val;
+	double val, val1, val2;
 
-	/* set farnsworth to samples */
+	/* calculate farnsworth length samples */
 	if (cw->farnsworth) {
-
 		if (cw->farnsworth > cw->wpm) {
 			fprintf(stderr, "Error: Effective speed (-e %d) must be lower "
 							"than character speed (-w %d)!\n", cw->farnsworth, 
 							cw->wpm);
 			exit(EXIT_FAILURE);
 		}
-
-
-		cw->farnsworth = (int) (6.0*cw->samplerate/(5.0*cw->farnsworth));
+		cw->fditlen = (int) (6.0*cw->samplerate/(5.0*cw->farnsworth));
 	}
 
-	/*	printf("Initializing CW buffers at %d WpM: ", wpm); */
-
 	/* dah */
-	len = (int) (3.0*6.0*cw->samplerate/(5.0*cw->wpm));			/* in samples */
+	len = (int) (6.0*cw->samplerate/(5.0*cw->wpm));			/* in samples */
 
 	/* ditlen not set == init_cw has not been called yet */
 	if (!cw->ditlen) {
 		/* allocate memory for the buffer */
-		if ((cw->dah_buf = calloc(len, sizeof(short int))) == NULL) {
+		if ((cw->dah_buf = calloc(3*len, sizeof(short int))) == NULL) {
 			fprintf(stderr, "Error: Can't allocate dah_buf[%d]\n", len);
+			exit(EXIT_FAILURE);
+		}
+		if ((cw->dit_buf = calloc(len, sizeof(short int))) == NULL) {
+			fprintf(stderr, "Error: Can't allocate dit_buf[%d]\n", len);
 			exit(EXIT_FAILURE);
 		}
 	}
 
-	for (x=0; x < len; x++) {
-
+	/* both dah_buf and dit_buf are filled in this loop */
+	for (x=0; x < 3*len; x++) {
 		switch (cw->waveform) {
 			case SINE:
 				val = sin(2*M_PI*cw->freq*x/cw->samplerate);
 				break;
 			case SAWTOOTH:
-				val=((1.0*cw->freq*x/cw->samplerate)-
+				val = ((1.0*cw->freq*x/cw->samplerate)-
 								floor(1.0*cw->freq*x/cw->samplerate))-0.5;
 				break;
 			case SQUARE:
@@ -348,51 +349,42 @@ void init_cw (CWP *cw) {
 				break;
 		}
 
-		if (x < cw->rt)  			/* shaping with sin^2 */
+		/* Shaping rising edge, same for dit and dah */
+		if (x < cw->rt)
 				val *= pow(sin(M_PI*x/(2.0*cw->rt)),2);
-		
-		if (x > (len-cw->ft)) 
-				val *= pow((sin(2*M_PI*(x-(len-cw->ft)+cw->ft)/(4*cw->ft))), 2);
-		
-		cw->dah_buf[x] = (short int) (val * 20000.0);
-	}
 
-	/* dit */
-	len = (int) (6.0*cw->samplerate/(5.0*cw->wpm));			/* in samples */
+		val1 = val2 = val;
 
-	/* ditlen not set == init_cw has not been called yet */
-	if (!cw->ditlen) {
-		/* allocate memory for the buffer */
-		if ((cw->dit_buf = calloc(len, sizeof(short int))) == NULL) {
-			fprintf(stderr, "Error: Can't allocate dit_buf[%d]\n", len);
-			exit(EXIT_FAILURE);
-		}
-	}
-
-	for (x=0; x < len; x++) {
-
-		switch (cw->waveform) {
-			case SINE:
-				val = sin(2*M_PI*cw->freq*x/cw->samplerate);
-				break;
-			case SAWTOOTH:
-				val=((1.0*cw->freq*x/cw->samplerate)-floor(1.0*cw->freq*x/cw->samplerate))-0.5;
-				break;
-			case SQUARE:
-				val = ceil(sin(2*M_PI*cw->freq*x/cw->samplerate))-0.5;
-				break;
+		/* Shaping falling edge, dit */
+		if (x < len) {
+		   if (x > (len-cw->ft)) {
+				val1 *= pow((sin(2*M_PI*(x-(len-cw->ft)+cw->ft)/(4*cw->ft))), 2);
+			}
+			cw->dit_buf[x] = (short int) (val1 * 20000.0);
 		}
 
-		if (x < cw->rt)  
-			val *= pow(sin(M_PI*x/(2.0*cw->rt)), 2); 
-		
-		if (x > (len-cw->ft)) 
-			val *= pow((sin(2*M_PI*(x-(len-cw->ft)+cw->ft)/(4*cw->ft))), 2);
-		
-		cw->dit_buf[x] = (short int) (val * 20000.0);
-	}
+		/* Shaping falling edge, dah */
+		if (x > (3*len-cw->ft)) {
+				val2 *= pow((sin(2*M_PI*(x-(3*len-cw->ft)+cw->ft)/(4*cw->ft))), 2);
+		}
+		cw->dah_buf[x] = (short int) (val2 * 20000.0);
+	} /* for */
 	
-	cw->ditlen = x;
+
+	/* Calculate maximum number of bytes per 'dah' for the PCM stream,
+	 * this will be used later to check if the buffer runs full
+	 * (10000 margin) */
+
+	if (cw->farnsworth) {
+		cw->maxbytes = (int) ((4+7.0*cw->ews)*(cw->fditlen)) + 10000;
+	}
+	else {	
+		cw->maxbytes = (int) ((6+7.0*cw->ews) * len) + 10000;
+	}
+
+	printf("f=%d, w=%d, max=%d\n", cw->farnsworth, cw->wpm, cw->maxbytes);
+
+	cw->ditlen = len;
 
 	return;
 }
@@ -485,7 +477,7 @@ void makeword(char * text, CWP *cw) {
 			for (u=0; u < (3*cw->ditlen); u++)
 					cw->inpcm[++j] = cw->dah_buf[u]; 
 		else 								/* word space */
-			for (u=0;u < (int)(1+7*cw->ews)*(cw->farnsworth ? cw->farnsworth : cw->ditlen); u++)
+			for (u=0;u < (int)(1+7*cw->ews)*(cw->farnsworth ? cw->fditlen : cw->ditlen); u++)
 					cw->inpcm[++j] = 0; 
 	
 		for (u=0; u < cw->ditlen; u++)	/* space of one dit length */
@@ -493,7 +485,7 @@ void makeword(char * text, CWP *cw) {
 	}	/* foreach dot/dash */
 
 	if (prosign == 0) {
-		for (u=0; u < (cw->farnsworth ? 3*cw->farnsworth-cw->ditlen : 2*cw->ditlen); u++)
+		for (u=0; u < (cw->farnsworth ? 3*cw->fditlen - cw->ditlen : 2*cw->ditlen); u++)
 			cw->inpcm[++j] = 0; 
 	}
 
@@ -631,17 +623,10 @@ void showcodes (int i) {
  * have to consider the effects of Farnsworth and extra word spacing */
 
 void buf_check (int j, CWP *cw) {
-	int max;
 
-	/* maximum bytes that may be added for one dot or dah, for either
-	 * farnsworth or non-farnsworth */
-
-	max = cw->farnsworth ? (int) ((4+7*cw->ews)*(cw->farnsworth)) : (6+7*cw->ews) * cw->ditlen;
-	max += 10000;			/* some margin to feel safe ... */
-
-	if (j > cw->inpcm_size - max) {
-			cw->inpcm_size +=  max;
-			cw->mp3buffer_size +=  (int) (1.25 * max + 7200.0);
+	if (j > cw->inpcm_size - cw->maxbytes) {
+			cw->inpcm_size +=  cw->maxbytes;
+			cw->mp3buffer_size +=  (int) (1.25 * cw->maxbytes + 7200.0);
 			if ((cw->inpcm = realloc(cw->inpcm, cw->inpcm_size*sizeof(short int)))== NULL) {
 				fprintf(stderr, "Error: Can't realloc inpcm[%d]\n", cw->inpcm_size);
 				exit(EXIT_FAILURE);
