@@ -8,6 +8,9 @@ all: ebook2cw
 ebook2cw: ebook2cw.c codetables.h
 	gcc ebook2cw.c -pedantic -Wall -lm -lmp3lame -D DESTDIR=\"$(DESTDIR)\" -D VERSION=\"$(VERSION)\" -o ebook2cw
 
+cgi: ebook2cw.c codetables.h
+	gcc -static ebook2cw.c -lmp3lame -lm -D DESTDIR=\"$(DESTDIR)\" -D VERSION=\"$(VERSION)\" -D CGI -o cw.cgi
+
 static:
 	gcc -static ebook2cw.c -lmp3lame -lm -D DESTDIR=\"$(DESTDIR)\" -D VERSION=\"$(VERSION)\" -o ebook2cw
 

@@ -121,16 +121,23 @@ void readconfig (CWP *cw);
 void setparameter (char p, char * value, CWP *cw);
 void loadmapping(char *filename, int enc, CWP *cw);
 char *mapstring (char *string, CWP *cw);
+int hexit (char c);
+void urldecode(char *buf);
+
 
 /* main */
 
 int main (int argc, char** argv) {
-	int pos, i;
-	int c;
+	int pos, i, c;
  	char word[1024]="";				/* will be cut when > 1024 chars long */
 	int chapter = 0;
 	int chw = 0, tw = 0, qw = 0;	/* chapter words, total words, qrq words */
 	FILE *infile;
+
+#ifdef CGI
+	char * querystring;
+	static char text[10000];
+#endif
 
 	/* initializing the CW parameter struct with standard values */
 	CWP cw;
@@ -167,6 +174,8 @@ int main (int argc, char** argv) {
 
 	infile = stdin;
 
+#ifndef CGI
+
 	printf("ebook2cw %s - (c) 2008 by Fabian Kurz, DJ1YFK\n\n", VERSION);
 
 	/* 
@@ -188,6 +197,7 @@ int main (int argc, char** argv) {
 			}
 		}
 	}
+#endif	/* ifndef CGI */
 
 	/* init lame */
 	gfp = lame_init();
@@ -205,12 +215,29 @@ int main (int argc, char** argv) {
 	/* Initially allocate inpcm, mp3buffer, dit_buf, dah_buf  */
 	buf_alloc(&cw);
 
+#ifndef CGI
 	printf("Speed: %dwpm, Freq: %dHz, Chapter: >%s<, Encoding: %s\n", cw.wpm, 
 		cw.freq, cw.chapterstr, cw.encoding == UTF8 ? "UTF-8" : "ISO 8859-1");
 
 	printf("Effective speed: %dwpm, ", cw.farnsworth ? cw.farnsworth : cw.wpm);
 	printf("Extra word spaces: %1.1f, ", cw.ews);
 	printf("QRQ: %dmin, reset QRQ: %s\n\n", cw.qrq, cw.reset ? "yes" : "no");
+#endif
+
+
+#ifdef CGI
+	cw.outfile = stdout;
+	printf("Content-type: audio/mpeg\n\n");
+	querystring = getenv("QUERY_STRING");
+	if ((querystring == NULL) || strlen(querystring) > 9000) {
+			exit(1);
+	}
+	sscanf(querystring, "s=%d&e=%d&f=%d&t=%9000s", &cw.wpm, &cw.farnsworth, &cw.freq, text);
+	strcat(text, " ");
+	fprintf(stderr, "1ext: >%s<\n", text);
+	urldecode(text);
+	fprintf(stderr, "2ext: >%s<\n", text);
+#endif
 
 	init_cw(&cw);	/* generate raw dit, dah */
 
@@ -222,10 +249,18 @@ int main (int argc, char** argv) {
 
 	cw.original_wpm = cw.wpm;					/* may be changed by QRQing */
 	chapter = 0;
+#ifndef CGI
 	openfile(chapter, &cw);
+#endif
 
+	i=0;
 	pos=0;
+
+#ifndef CGI
 	while ((c = getc(infile)) != EOF) {
+#else
+	while ((c = text[i++]) != '\0') {
+#endif
 
 		if (c == '\r') 			/* DOS linebreaks */
 				continue;
@@ -234,6 +269,7 @@ int main (int argc, char** argv) {
 		
 		if ((c == ' ') || (c == '\n') || (pos == 1024)) {
 			word[pos] = '\0';
+#ifndef CGI
 			if (strcmp(cw.chapterstr, word) == 0) {	/* new chapter */
 				closefile(chapter, chw, &cw);
 				chw = 0;
@@ -247,6 +283,7 @@ int main (int argc, char** argv) {
 					
 				openfile(chapter, &cw);
 			}
+#endif
 
 			/* check for commands: |f or |w */
 			if (word[0] == '|') {
@@ -271,14 +308,17 @@ int main (int argc, char** argv) {
 		} /* word */
 
 	} /* eof */
-
+#ifndef CGI
 	closefile(chapter, chw, &cw);
+#endif
 
 	free(cw.mp3buffer);
 	free(cw.inpcm);
 
 	/* factor 0.9 due to many 'words' which aren't actually words, like '\n' */
+#ifndef CGI
 	printf("Total words: %d, total time: %d min\n", tw, (int) ((tw/cw.wpm)*0.9));
+#endif
 
 	lame_close(gfp);
 
@@ -298,10 +338,10 @@ void init_cw (CWP *cw) {
 	/* calculate farnsworth length samples */
 	if (cw->farnsworth) {
 		if (cw->farnsworth > cw->wpm) {
-			fprintf(stderr, "Error: Effective speed (-e %d) must be lower "
-							"than character speed (-w %d)!\n", cw->farnsworth, 
-							cw->wpm);
-			exit(EXIT_FAILURE);
+			fprintf(stderr, "Warning: Effective speed (-e %d) must be lower "
+							"than character speed (-w %d)! Speed adjusted.\n", 
+							cw->farnsworth, cw->wpm);
+			cw->farnsworth = cw->wpm;
 		}
 		cw->fditlen = (int) (6.0*cw->samplerate/(5.0*cw->farnsworth));
 	}
@@ -1084,5 +1124,77 @@ void buf_alloc(CWP *cw) {
 	}
 
 }
+
+/* 
+ * URLDECODE stuff, needed for the CGI only:
+ * */
+
+/* Anti-Web HTTPD */
+/* Hardcore Software */
+/*
+This software is Copyright (C) 2001-2004 By Hardcore Software and
+others. The software is distributed under the terms of the GNU General
+Public License. See the file 'COPYING' for more details.
+*/
+
+/*
+This code is Copyright (C) 2001 By Zas ( zas at norz.org )
+The software is distributed under the terms of the GNU General Public
+License. See the file 'COPYING' for more details.
+*/
+
+/* I might've modified this slightly, but it's definitley Zas'. -Fractal */
+
+int hexit(char c) {
+    if ( c >= '0' && c <= '9' )
+        return c - '0';
+    if ( c >= 'a' && c <= 'f' )
+        return c - 'a' + 10;
+    if ( c >= 'A' && c <= 'F' )
+        return c - 'A' + 10;
+    return 0;
+}
+
+
+/* Decode string %xx -> char (in place) */
+void urldecode(char *buf) {
+  int v;
+  char *p, *s, *w;
+
+  w=p=buf;
+  while (*p) {
+    v=0;
+
+    if (*p=='%') {
+      s=p;
+      s++;
+
+      if (isxdigit((int) s[0]) && isxdigit((int) s[1]) ) {
+        v=hexit(s[0])*16+hexit(s[1]);
+        if (v) { /* do not decode %00 to null char */
+          *w=(char)v;
+          p=&s[1];
+        }
+      }
+
+    }
+
+    if (!v) *w=*p;
+    p++; w++;
+  }
+  *w='\0';
+
+  return;
+
+}
+
+
+
+
+
+
+
+
+
 
 
