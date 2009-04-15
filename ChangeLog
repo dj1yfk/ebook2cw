@@ -1,4 +1,6 @@
 0.7.1 /              Fabian Kurz   <mail@fkurz.net>
+	* ebook2cw can now also be compiled to work as a CGI on a webserver
+	* Option to add a noise floor with an user definable SNR added [-N]
 	* Waveform can now be set to sine, sawtooth or squarewave.
 	* Config files are searched in current directory, ~/.ebook2cw,
 	  and DESTDIR/share/doc/ebook2cw/examples now. ~/.ebook2cw is

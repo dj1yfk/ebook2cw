@@ -1,7 +1,7 @@
 /* 
 ebook2cw - converts an ebook to morse mp3s
 
-Copyright (C) 2008  Fabian Kurz, DJ1YFK
+Copyright (C) 2009  Fabian Kurz, DJ1YFK
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License along with
 this program; if not, write to the Free Software Foundation, Inc., 51 Franklin
 Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-source code looks properly indented with tw=4
+source code looks properly indented with ts=4
 
 */
 
@@ -41,8 +41,9 @@ source code looks properly indented with tw=4
 #define VERSION "0.0.0"
 #endif
 
-#define PCMBUFFER 220500	/* 20 seconds at 11kHz, for one word. plenty.	*/
-#define MP3BUFFER 285000    /* abt 1.25*PCMBUFFER + 7200, as recommended	*/
+#define PCMBUFFER   220500	/* 20 seconds at 11kHz, for one word. plenty.	*/
+#define NOISEBUFFER 220500	/* 20 seconds at 11kHz, for one word. plenty.	*/
+#define MP3BUFFER   285000    /* abt 1.25*PCMBUFFER + 7200, as recommended	*/
 
 #define ISO8859 0
 #define UTF8    1
@@ -50,6 +51,9 @@ source code looks properly indented with tw=4
 #define SINE 0
 #define SAWTOOTH 1
 #define SQUARE 2
+
+#define NOISEAMPLITUDE (10000.0)
+#define CWAMPLITUDE (20000.0)
 
 lame_global_flags *gfp;
 
@@ -71,18 +75,25 @@ typedef struct {
 		wordspace,				/* wordspace in samples, depends on Farnsworth*/
 		letterspace;			/* inter-letter space */
 	float ews;					/* extra word space */
+	/* Noise parameters */
+	int bandpassbw,				/* Noise filter bandwidth */
+		bandpassfc,				/* f_center of the bandpass */
+		addnoise,				/* 1 if noise should be added, 0 if not */
+		snr;					/* SNR of the CW with the noise */
 	/* mp3 parameters, buffers */
 	int samplerate,
 		brate,
 		quality;
 	int inpcm_size,
 		mp3buffer_size,
+		noisebuf_size,
 		ditlen,					/* normal dit length in samples */
 		fditlen,				/* farnsworth ditlen in samples */
-		maxbytes;				/* may bytes of a 'dah' */
+		maxbytes;				/* max bytes of a 'dah' */
 	short int *dit_buf,
 			*dah_buf,
-			*inpcm;
+			*inpcm,
+			*noisebuf;
 	unsigned char *mp3buffer;
 	/* Chapter splitting */
 	char chapterstr[80], 		/* split chapters by this string */
@@ -108,22 +119,30 @@ typedef struct {
 
 
 /* functions */
-void init_cw (CWP *cw);
-void help (void);
-void showcodes (int i);
-void makeword(char * text, CWP *cw);
-void closefile (int letter, int chw, CWP *cw);
-void openfile (int chapter, CWP *cw);
-void buf_alloc (CWP *cw);
-void buf_check (int j, CWP *cw);
-void command (char * cmd, CWP *cw);
-void readconfig (CWP *cw);
-void setparameter (char p, char * value, CWP *cw);
-void loadmapping(char *filename, int enc, CWP *cw);
-char *mapstring (char *string, CWP *cw);
-int hexit (char c);
-void urldecode(char *buf);
+void  init_cw (CWP *cw);
+void  help (void);
+void  showcodes (int i);
+void  makeword(char * text, CWP *cw);
+void  closefile (int letter, int chw, CWP *cw);
+void  openfile (int chapter, CWP *cw);
+void  buf_alloc (CWP *cw);
+void  buf_check (int j, CWP *cw);
+void  command (char * cmd, CWP *cw);
+void  readconfig (CWP *cw);
+void  setparameter (char p, char * value, CWP *cw);
+void  loadmapping(char *filename, int enc, CWP *cw);
+char  *mapstring (char *string, CWP *cw);
+void  addnoise (int length, CWP *cw);
+float snramplitude (int snr);
+void  fillnoisebuffer (short int *buf, int size, float amplitude);
+void  filterloop (short int *buf, int l, int b);
+void  scalebuffer(short int *buf, int length, float factor);
+void  addbuffer (short int *b1, short int *b2, int l);
 
+#ifdef CGI
+int   hexit (char c);
+void  urldecode(char *buf);
+#endif
 
 /* main */
 
@@ -151,12 +170,18 @@ int main (int argc, char** argv) {
 	cw.ews = 0.0;
 	cw.pBT = 1;
 	cw.waveform = SINE;
+	
+	cw.bandpassbw = 500;
+	cw.bandpassfc = 800;
+	cw.addnoise = 0;
+	cw.snr = 0;
 
 	cw.samplerate = 11025;
 	cw.brate = 16;
 	cw.quality = 5;
 	
 	cw.inpcm_size = PCMBUFFER;
+	cw.noisebuf_size = NOISEBUFFER;
 	cw.mp3buffer_size = MP3BUFFER;
 	cw.ditlen = 0;
 	strcpy(cw.chapterstr, "CHAPTER");
@@ -184,7 +209,7 @@ int main (int argc, char** argv) {
 
 	readconfig(&cw);
 
-	while((i=getopt(argc,argv, "o:w:W:e:f:uc:k:Q:R:pF:s:b:q:a:t:y:S:hnT:"))!= -1){
+	while((i=getopt(argc,argv, "o:w:W:e:f:uc:k:Q:R:pF:s:b:q:a:t:y:S:hnT:N:B:C:"))!= -1){
 		setparameter(i, optarg, &cw);
 	} 
 
@@ -212,7 +237,7 @@ int main (int argc, char** argv) {
 		return(1);
 	}
 
-	/* Initially allocate inpcm, mp3buffer, dit_buf, dah_buf  */
+	/* Initially allocate inpcm, noisebuffer, mp3buffer, dit_buf, dah_buf  */
 	buf_alloc(&cw);
 
 #ifndef CGI
@@ -234,9 +259,7 @@ int main (int argc, char** argv) {
 	}
 	sscanf(querystring, "s=%d&e=%d&f=%d&t=%9000s", &cw.wpm, &cw.farnsworth, &cw.freq, text);
 	strcat(text, " ");
-	fprintf(stderr, "1ext: >%s<\n", text);
 	urldecode(text);
-	fprintf(stderr, "2ext: >%s<\n", text);
 #endif
 
 	init_cw(&cw);	/* generate raw dit, dah */
@@ -314,6 +337,7 @@ int main (int argc, char** argv) {
 
 	free(cw.mp3buffer);
 	free(cw.inpcm);
+	free(cw.noisebuf);
 
 	/* factor 0.9 due to many 'words' which aren't actually words, like '\n' */
 #ifndef CGI
@@ -322,7 +346,7 @@ int main (int argc, char** argv) {
 
 	lame_close(gfp);
 
-	return(0);
+	return (EXIT_SUCCESS);
 }
 
 
@@ -387,14 +411,14 @@ void init_cw (CWP *cw) {
 		   if (x > (len-cw->ft)) {
 				val1 *= pow((sin(2*M_PI*(x-(len-cw->ft)+cw->ft)/(4*cw->ft))), 2);
 			}
-			cw->dit_buf[x] = (short int) (val1 * 20000.0);
+			cw->dit_buf[x] = (short int) (val1 * CWAMPLITUDE);
 		}
 
 		/* Shaping falling edge, dah */
 		if (x > (3*len-cw->ft)) {
 				val2 *= pow((sin(2*M_PI*(x-(3*len-cw->ft)+cw->ft)/(4*cw->ft))), 2);
 		}
-		cw->dah_buf[x] = (short int) (val2 * 20000.0);
+		cw->dah_buf[x] = (short int) (val2 * CWAMPLITUDE);
 	} /* for */
 	
 	cw->ditlen = len;
@@ -519,6 +543,10 @@ void makeword(char * text, CWP *cw) {
  }	/* foreach letter */
 
  /* j = total length of samples in 'inpcm' */
+
+ if (cw->addnoise) {
+	addnoise(j, cw);	
+ }
  
  outbytes = lame_encode_buffer(gfp, cw->inpcm, cw->inpcm, j, cw->mp3buffer, cw->mp3buffer_size);
  if (outbytes < 0) {
@@ -599,7 +627,8 @@ void help (void) {
 	printf("         [-c chapter-separator] [-o outfile-name] [-Q minutes]\n");
 	printf("         [-a author] [-t title] [-k comment] [-y year]\n");
 	printf("         [-u] [-S ISO|UTF] [-n] [-e eff.wpm] [-W space]\n");
-	printf("	     [infile]\n\n");
+	printf("         [-N snr] [-B filter bandwidth] [-C filter center]\n");
+	printf("         [infile]\n\n");
 	printf("defaults: 25 WpM, 600Hz, RT=FT=50, s=11025Hz, b=16kbps,\n");
 	printf("          c=\"CHAPTER\", o=\"Chapter\" infile = stdin\n");
 	printf("\n");
@@ -647,17 +676,27 @@ void showcodes (int i) {
 
 
 /* make sure the inpcm-buffer doesn't run full.
- * have to consider the effects of Farnsworth and extra word spacing */
+ * has to consider the effects of Farnsworth and extra word spacing 
+ * since memory is cheap and cpu cycles are precious, the size of the 
+ * buffers is doubled each time they run full (if they ever do)
+ */
 
 void buf_check (int j, CWP *cw) {
 
 	if (j > cw->inpcm_size - cw->maxbytes) {
-			cw->inpcm_size +=  cw->maxbytes;
-			cw->mp3buffer_size +=  (int) (1.25 * cw->maxbytes + 7200.0);
+			cw->inpcm_size *=  2;
+			cw->noisebuf_size = cw->inpcm_size;
+			cw->mp3buffer_size *= 2;
 			if ((cw->inpcm = realloc(cw->inpcm, cw->inpcm_size*sizeof(short int)))== NULL) {
 				fprintf(stderr, "Error: Can't realloc inpcm[%d]\n", cw->inpcm_size);
 				exit(EXIT_FAILURE);
 			}
+			
+			if ((cw->noisebuf = realloc(cw->noisebuf, cw->noisebuf_size*sizeof(short int)))== NULL) {
+				fprintf(stderr, "Error: Can't realloc noisebuf[%d]\n", cw->noisebuf_size);
+				exit(EXIT_FAILURE);
+			}
+			fillnoisebuffer(cw->noisebuf, cw->noisebuf_size, NOISEAMPLITUDE);
 			
 			if ((cw->mp3buffer = realloc(cw->mp3buffer, cw->mp3buffer_size*sizeof(char))) 
 						   	== NULL) {
@@ -713,6 +752,10 @@ void command (char * cmd, CWP *cw) {
 			}
 			else 
 				fprintf(stderr, "Invalid waveform: %d. Ignored.\n", i);
+			break;
+		case 'N':
+			cw->addnoise = 1;
+			cw->snr = i;
 			break;
 		default:
 			fprintf(stderr, "Invalid command %s. Ignored.\n", cmd);				
@@ -934,6 +977,23 @@ void setparameter (char i, char *value, CWP *cw) {
 					cw->waveform = SQUARE;	
 				}
 				break;
+			case 'N':
+				cw->snr = atoi(value);
+				cw->addnoise = 1;
+				if ((cw->snr < -10) || (cw->snr > 10)) {
+					fprintf(stderr, "Warning: SNR %ddB not implemented."
+									" Noise disabled.\n\n", cw->snr);
+					cw->addnoise = 0;
+					cw->snr = 0;
+				}
+				break;
+			case 'B':
+				cw->bandpassbw = atoi(value);
+				break;
+			case 'C':
+				cw->bandpassfc = atoi(value);
+				break;
+				
 		} /* switch */
 
 }
@@ -1097,13 +1157,21 @@ char *mapstring (char * string, CWP *cw) {
 
 void buf_alloc(CWP *cw) {
 
-	/* pcm and mp3 buffers will be increased later as needed, but the initial
-	 * values should be sufficient for most speeds and reasonably long words */
+	/* pcm, noise and mp3 buffers will be increased later as needed, but the
+	 * initial values should be sufficient for most speeds and reasonably long
+	 * words */
 	if ((cw->inpcm = calloc(PCMBUFFER, sizeof(short int))) == NULL) {
 		fprintf(stderr, "Error: Can't allocate inpcm[%d]!\n", PCMBUFFER);
 		exit(EXIT_FAILURE);
 	}
 	cw->inpcm_size = PCMBUFFER;
+
+	if ((cw->noisebuf = calloc(NOISEBUFFER, sizeof(short int))) == NULL) {
+		fprintf(stderr, "Error: Can't allocate noisebuf[%d]!\n", NOISEBUFFER);
+		exit(EXIT_FAILURE);
+	}
+	cw->noisebuf_size = NOISEBUFFER;
+	fillnoisebuffer(cw->noisebuf, cw->noisebuf_size, NOISEAMPLITUDE);
 
 	if ((cw->mp3buffer = calloc(MP3BUFFER, sizeof(unsigned char))) == NULL) {
 		fprintf(stderr, "Error: Can't allocate mp3buffer[%d]!\n", MP3BUFFER);
@@ -1124,6 +1192,8 @@ void buf_alloc(CWP *cw) {
 	}
 
 }
+
+#ifdef CGI
 
 /* 
  * URLDECODE stuff, needed for the CGI only:
@@ -1188,13 +1258,116 @@ void urldecode(char *buf) {
 
 }
 
+#endif  /* ifdef CGI */
+
+/* addnoise:
+	adds noise with bandwidth, center frequency and SNR as defined in CWP
+	noise amplitude is constant, the CW amplitude is scaled.
+*/
+
+void addnoise (int length, CWP *cw) {
+	scalebuffer(cw->inpcm, cw->inpcm_size, snramplitude(cw->snr));
+	addbuffer(cw->inpcm, cw->noisebuf, cw->inpcm_size);
+	filterloop(cw->inpcm, cw->inpcm_size, cw->bandpassbw); 
+}
+
+/* snramplitude - returns the amplitude needed for a SNR of "snr" dB as
+   float; noise average amplitude considered to be 0.25
+   Currently implemented by a lookup table with fixed, precalculated values.
+*/
+float snramplitude (int snr) {
+	/* Lookup table; first value = -10dB, last +10dB */
+	float snrlookup[21] = { 0.042, 0.0475, 0.0533, 0.0599, 0.067, 0.075, 0.084, 0.094,
+		0.1055, 0.1187, 0.134, 0.15, 0.168, 0.19, 0.213, 0.238, 0.267, 0.3, 0.335, 0.378, 0.425 };
+
+	return snrlookup[snr+10];
+}
 
 
+void fillnoisebuffer (short int *buf, int size, float amplitude) {
+	int i;
+	
+	for (i=0; i < size; i++) {
+		buf[i] = (short int) (2.0*amplitude*(rand()/(1.0*RAND_MAX)-0.5));
+	}
+}
 
 
+/*
+ * Digital filter designed by mkfilter/mkshape/gencode A.J. Fisher Command 
+ * line: /www/usr/fisher/helpers/mkfilter -Bu -Bp -o 3 -a 3.7500000000e-02 
+ * 1.6250000000e-01 -l 
+ *
+ * Modified to filter "in place" with one array (buf) of length l
+ */
+
+void filterloop (short int *buf, int l, int b) {
+  static float xv[7], yv[7];
+  short int *in;
+
+  /* 4 filters with each 6 coefficients */
+  static float c[4][6] = {
+    /* 100Hz */
+    {-0.6235385946, 3.3779247772, -8.2824221345, 11.5675604240,
+     -9.6967045468, 4.6299593645},
+    /* 500Hz */
+    {-0.4535459334, 2.5370880100, -6.4847845669, 9.5144072211,
+     -8.4472239809, 4.3051177389},
+    /* 1000Hz */
+    {-0.1978251873, 1.3168771088, -3.8803884946, 6.5449240143,
+     -6.6950970397, 3.9046544087},
+    /* 2100Hz */
+    {0.0131505881, 0.2450198734, -0.6698556894, 0.9667482217,
+     -1.8996423954, 2.3375093931}
+  };
+
+  static float gain[4] = { 7.637953014e+02, 1.886640723e+02, 3.154970680e+01,
+    5.346000407e+00 };
+
+  long int k;
+
+  /* bandwidth -> filter parameters */
+  if      (b < 500 ) { b = 0; }
+  else if (b < 1000) { b = 1; }
+  else if (b < 2100) { b = 2; }
+  else               { b = 4; }
+
+  in = calloc(l, sizeof (short int));
+  memcpy(in, buf, l*sizeof(short int));
+
+  for (k = 0; k < l; k++)
+    {
+      xv[0] = xv[1]; xv[1] = xv[2]; xv[2] = xv[3]; 
+	  xv[3] = xv[4]; xv[4] = xv[5]; xv[5] = xv[6];
+
+	  xv[6] = ((float) in[k] / 255) / gain[b];
+
+	  yv[0] = yv[1]; yv[1] = yv[2]; yv[2] = yv[3];
+	  yv[3] = yv[4]; yv[4] = yv[5]; yv[5] = yv[6];
+
+      yv[6] = (xv[6] - xv[0]) + 3 * (xv[2] - xv[4])
+		+ (c[b][0] * yv[0]) + (c[b][1] * yv[1])
+		+ (c[b][2] * yv[2]) + (c[b][3] * yv[3])
+		+ (c[b][4] * yv[4]) + (c[b][5] * yv[5]);
+   
+   	  buf[k] = (short int) (yv[6] * 255.0);
+    }
+}
 
 
+void scalebuffer(short int *buf, int length, float factor) {
+	int i;
+	for (i=0; i < length; i++) {
+		buf[i] = (short int) buf[i]*factor;
+	}
+}
 
 
+/* Adds buffer b2 to b1 with length l */
 
-
+void addbuffer (short int *b1, short int *b2, int l) {
+	int i;
+	for (i=0; i < l; i++) {
+		b1[i] += b2[i];
+	}
+}

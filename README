@@ -24,3 +24,7 @@ DESTDIR is /usr by default (so the binary will be in /usr/bin/).
 
 make [DESTDIR=..]
 make install
+
+CGI
+---
+ebook2cw can also be compiled as a CGI, with "make cgi".
