@@ -1,1 +1,1 @@
-gcc oggenc.c -lm -lvorbis -lvorbisenc -o ogg
+gcc oggenc.c -static -lvorbis -lvorbisenc -logg -lm -o ogg

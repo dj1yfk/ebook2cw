@@ -1,7 +1,7 @@
 /* 
 ebook2cw - converts an ebook to morse mp3s
 
-Copyright (C) 2009  Fabian Kurz, DJ1YFK
+Copyright (C) 2007 - 2010  Fabian Kurz, DJ1YFK
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -20,7 +20,8 @@ source code looks properly indented with ts=4
 
 */
 
-#include "lame/lame.h"
+#include <lame/lame.h>
+#include <vorbis/vorbisenc.h>
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -48,6 +49,9 @@ source code looks properly indented with ts=4
 #define ISO8859 0
 #define UTF8    1
 
+#define MP3 0
+#define OGG 1
+
 #define SINE 0
 #define SAWTOOTH 1
 #define SQUARE 2
@@ -55,8 +59,17 @@ source code looks properly indented with ts=4
 #define NOISEAMPLITUDE (10000.0)
 #define CWAMPLITUDE (20000.0)
 
+/* Global for LAME */
 lame_global_flags *gfp;
 
+/* Globals for OGG/Vorbis */
+ogg_stream_state os;
+ogg_page         og;
+ogg_packet       op; 
+vorbis_info      vi;
+vorbis_comment   vc; 
+vorbis_dsp_state vd; 
+vorbis_block     vb;
 
 /* Struct CWP to keep all CW parameters */
 
@@ -80,7 +93,8 @@ typedef struct {
 		bandpassfc,				/* f_center of the bandpass */
 		addnoise,				/* 1 if noise should be added, 0 if not */
 		snr;					/* SNR of the CW with the noise */
-	/* mp3 parameters, buffers */
+	/* mp3/ogg encoder parameters, buffers */
+	int encoder;			
 	int samplerate,
 		brate,
 		quality;
@@ -120,6 +134,9 @@ typedef struct {
 
 /* functions */
 void  init_cw (CWP *cw);
+void  init_encoder (CWP *cw);
+void  encode_buffer (int length, CWP *cw);
+void  ogg_encode_and_write (CWP *cw);
 void  help (void);
 void  showcodes (int i);
 void  makeword(char * text, CWP *cw);
@@ -176,6 +193,8 @@ int main (int argc, char** argv) {
 	cw.addnoise = 0;
 	cw.snr = 0;
 
+	cw.encoder = OGG;
+
 	cw.samplerate = 11025;
 	cw.brate = 16;
 	cw.quality = 5;
@@ -201,7 +220,7 @@ int main (int argc, char** argv) {
 
 #ifndef CGI
 
-	printf("ebook2cw %s - (c) 2008 by Fabian Kurz, DJ1YFK\n\n", VERSION);
+	printf("ebook2cw %s - (c) 2010 by Fabian Kurz, DJ1YFK\n\n", VERSION);
 
 	/* 
 	 * Find and read ebook2cw.conf 
@@ -209,7 +228,7 @@ int main (int argc, char** argv) {
 
 	readconfig(&cw);
 
-	while((i=getopt(argc,argv, "o:w:W:e:f:uc:k:Q:R:pF:s:b:q:a:t:y:S:hnT:N:B:C:"))!= -1){
+	while((i=getopt(argc,argv, "Oo:w:W:e:f:uc:k:Q:R:pF:s:b:q:a:t:y:S:hnT:N:B:C:"))!= -1){
 		setparameter(i, optarg, &cw);
 	} 
 
@@ -224,18 +243,8 @@ int main (int argc, char** argv) {
 	}
 #endif	/* ifndef CGI */
 
-	/* init lame */
-	gfp = lame_init();
-	lame_set_num_channels(gfp,1);
-	lame_set_in_samplerate(gfp, cw.samplerate);
-	lame_set_brate(gfp, cw.brate);
-	lame_set_mode(gfp,1);
-	lame_set_quality(gfp, cw.quality); 
-	
-	if (lame_init_params(gfp) < 0) {
-		fprintf(stderr, "Failed: lame_init_params(gfp) \n");
-		return(1);
-	}
+	/* init encoder (LAME or OGG/Vorbis) */
+	init_encoder(&cw);
 
 	/* Initially allocate inpcm, noisebuffer, mp3buffer, dit_buf, dah_buf  */
 	buf_alloc(&cw);
@@ -252,7 +261,14 @@ int main (int argc, char** argv) {
 
 #ifdef CGI
 	cw.outfile = stdout;
-	printf("Content-type: audio/mpeg\n\n");
+	switch (cw.encoder) {
+		case MP3:
+			printf("Content-type: audio/mpeg\n\n");
+			break;
+		case OGG:
+			printf("Content-type: audio/ogg\n\n");
+			break;
+	}
 	querystring = getenv("QUERY_STRING");
 	if ((querystring == NULL) || strlen(querystring) > 9000) {
 			exit(1);
@@ -333,6 +349,9 @@ int main (int argc, char** argv) {
 	} /* eof */
 #ifndef CGI
 	closefile(chapter, chw, &cw);
+#else
+	vorbis_analysis_wrote(&vd,0);
+	ogg_encode_and_write(&cw);
 #endif
 
 	free(cw.mp3buffer);
@@ -344,7 +363,16 @@ int main (int argc, char** argv) {
 	printf("Total words: %d, total time: %d min\n", tw, (int) ((tw/cw.wpm)*0.9));
 #endif
 
-	lame_close(gfp);
+	if (cw.encoder == MP3) {
+		lame_close(gfp);
+	}
+	else {
+		ogg_stream_clear(&os);
+		vorbis_block_clear(&vb);
+		vorbis_dsp_clear(&vd);
+		vorbis_comment_clear(&vc);
+		vorbis_info_clear(&vi);
+	}
 
 	return (EXIT_SUCCESS);
 }
@@ -450,7 +478,6 @@ void init_cw (CWP *cw) {
 
 void makeword(char * text, CWP *cw) {
  const char *code;				/* CW code as . and - */
- int outbytes;
 
  int c, i, j, u, w;
  int prosign = 0;
@@ -547,78 +574,104 @@ void makeword(char * text, CWP *cw) {
  if (cw->addnoise) {
 	addnoise(j, cw);	
  }
- 
- outbytes = lame_encode_buffer(gfp, cw->inpcm, cw->inpcm, j, cw->mp3buffer, cw->mp3buffer_size);
- if (outbytes < 0) {
-	fprintf(stderr, "Error: lame_encode_buffer returned %d. Exit.\n", outbytes);
-	exit(EXIT_FAILURE);
- }
 
- if (fwrite(cw->mp3buffer, sizeof(char), outbytes, cw->outfile) != outbytes) {
-	fprintf(stderr, "Error: Writing %db to file failed. Exit.\n", outbytes);
-	exit(EXIT_FAILURE);
- }
+
+ encode_buffer(j, cw); 
+
 
 }
 
 
 /* closefile -- finishes writing the current file, flushes the encoder buffer */
 
-void closefile (int letter, int chw, CWP *cw) {
- int outbytes;
- char mp3filename[80] = "";
+void closefile (int chapter, int chw, CWP *cw) {
+	int outbytes;
+	char outfilename[80] = "";
 
- printf("words: %d, minutes: %d\n", chw, (int) ((chw/cw->wpm)*0.9));
+	printf("words: %d, minutes: %d\n", chw, (int) ((chw/cw->wpm)*0.9));
 
- snprintf(mp3filename, 80, "%s%04d.mp3",  cw->chapterfilename, letter);
- printf("Finishing %s\n\n",  mp3filename);
+	snprintf(outfilename, 80, "%s%04d.%s",  cw->chapterfilename, chapter, 
+			(cw->encoder == MP3) ? "mp3" : "ogg");
+	printf("Finishing %s\n\n",  outfilename);
 
- outbytes = lame_encode_flush(gfp, cw->mp3buffer, cw->mp3buffer_size);
+	switch (cw->encoder) {
+		case MP3:
+			outbytes = lame_encode_flush(gfp,cw->mp3buffer, cw->mp3buffer_size);
  
- if (outbytes < 0) {
-	fprintf(stderr, "Error: lame_encode_buffer returned %d.\n", outbytes);
-	exit(EXIT_FAILURE);
- }
+			if (outbytes < 0) {
+				fprintf(stderr, "Error: lame_encode_buffer returned %d.\n", 
+					outbytes);
+				exit(EXIT_FAILURE);
+			}
 
- if (fwrite(cw->mp3buffer, sizeof(char), outbytes, cw->outfile) != outbytes) {
-	fprintf(stderr, "Error: Writing %db to file failed. Exit.\n", outbytes);
-	exit(EXIT_FAILURE);
- }
+			if (fwrite(cw->mp3buffer, sizeof(char), outbytes, cw->outfile) != 
+					 outbytes) {
+				fprintf(stderr, "Error: Writing %db to file failed. Exit.\n", 
+						outbytes);
+				exit(EXIT_FAILURE);
+			}
+			break;
+		case OGG:
+			vorbis_analysis_wrote(&vd,0);
+			ogg_encode_and_write(cw);
+			break;
+
+	}
 
  fclose(cw->outfile);
 }
 
 
-
-
-
 /* openfile -- starts a new chapter by opening a new file as outfile */
 
 void openfile (int chapter, CWP *cw) {
-	char mp3filename[80] = "";
+	char outfilename[80] = "";
 	static char tmp[80] = "";
+	ogg_packet       hdr;
+	ogg_packet       hdr_comm;
+	ogg_packet       hdr_code;
 
-	snprintf(mp3filename, 80, "%s%04d.mp3",  cw->chapterfilename, chapter);
-	printf("Starting %s\n",  mp3filename);
+	snprintf(outfilename, 80, "%s%04d.%s",  cw->chapterfilename, chapter, 
+			(cw->encoder == MP3) ? "mp3" : "ogg");
+	printf("Starting %s\n",  outfilename);
  
-	if ((cw->outfile = fopen(mp3filename, "wb")) == NULL) {
-		fprintf(stderr, "Error: Failed to open %s\n", mp3filename);
+	if ((cw->outfile = fopen(outfilename, "wb")) == NULL) {
+		fprintf(stderr, "Error: Failed to open %s\n", outfilename);
 		exit(EXIT_FAILURE);
 	}
 
-	snprintf(tmp, 79, "%s - %d", cw->id3_title, chapter);	/* generate title */
+	switch (cw->encoder) {
+		case MP3:
+			snprintf(tmp, 79, "%s - %d", cw->id3_title, chapter);	/* title */
+			id3tag_init(gfp);
+			id3tag_set_artist(gfp, cw->id3_author);
+			id3tag_set_year(gfp, cw->id3_year);
+			id3tag_set_title(gfp, tmp);
+			id3tag_set_comment(gfp, cw->id3_comment);
+			break;
+		case OGG:
+			vorbis_comment_init(&vc);
+			vorbis_comment_add_tag(&vc,"ENCODER","ebook2cw");
+			vorbis_analysis_init(&vd, &vi);
+			vorbis_block_init(&vd, &vb);
+			ogg_stream_init(&os,rand());
 
-	id3tag_init(gfp);
-	id3tag_set_artist(gfp, cw->id3_author);
-	id3tag_set_year(gfp, cw->id3_year);
-	id3tag_set_title(gfp, tmp);
-	id3tag_set_comment(gfp, cw->id3_comment);
+			vorbis_analysis_headerout(&vd,&vc,&hdr,&hdr_comm,&hdr_code);
+			ogg_stream_packetin(&os,&hdr); 
+			ogg_stream_packetin(&os,&hdr_comm);
+			ogg_stream_packetin(&os,&hdr_code);
+			while (ogg_stream_flush(&os,&og)) {
+				fwrite(og.header,1,og.header_len,cw->outfile);
+				fwrite(og.body,1,og.body_len,cw->outfile);
+			}
+			break;
+	}
 
 }
 
 
 void help (void) {
-	printf("ebook2cw v%s - (c) 2008 by Fabian Kurz, DJ1YFK, http://fkurz.net/\n", VERSION);
+	printf("ebook2cw v%s - (c) 2010 by Fabian Kurz, DJ1YFK, http://fkurz.net/\n", VERSION);
 	printf("\nThis is free software, and you are welcome to redistribute it\n"); 
 	printf("under certain conditions (see COPYING).\n");
 	printf("\n");
@@ -959,6 +1012,9 @@ void setparameter (char i, char *value, CWP *cw) {
 				break;
 			case 'n':
 				cw->reset = 0;
+				break;
+			case 'O':
+				cw->encoder = OGG;
 				break;
 			case 'p':
 				cw->pBT = 0;
@@ -1371,3 +1427,105 @@ void addbuffer (short int *b1, short int *b2, int l) {
 		b1[i] += b2[i];
 	}
 }
+
+
+
+void init_encoder (CWP *cw) {
+	ogg_packet       hdr;
+	ogg_packet       hdr_comm;
+	ogg_packet       hdr_code;
+
+	if (cw->encoder == MP3) {
+		gfp = lame_init();
+		lame_set_num_channels(gfp,1);
+		lame_set_in_samplerate(gfp, cw->samplerate);
+		lame_set_brate(gfp, cw->brate);
+		lame_set_mode(gfp,1);
+		lame_set_quality(gfp, cw->quality); 
+			
+		if (lame_init_params(gfp) < 0) {
+			fprintf(stderr, "Failed: lame_init_params(gfp) \n");
+			exit(1);
+		}
+	}
+	else {	/* OGG */
+		vorbis_info_init(&vi);
+		if (vorbis_encode_init_vbr(&vi,1,cw->samplerate,0.7)) {
+			fprintf(stderr, "Failed: vorbis_encode_init_vbr()\n");
+			exit(1);
+		}
+
+			vorbis_comment_init(&vc);
+			vorbis_comment_add_tag(&vc,"ENCODER","ebook2cw");
+			vorbis_analysis_init(&vd, &vi);
+			vorbis_block_init(&vd, &vb);
+			ogg_stream_init(&os,rand());
+
+			vorbis_analysis_headerout(&vd,&vc,&hdr,&hdr_comm,&hdr_code);
+			ogg_stream_packetin(&os,&hdr); 
+			ogg_stream_packetin(&os,&hdr_comm);
+			ogg_stream_packetin(&os,&hdr_code);
+
+	}
+
+}
+
+
+void ogg_encode_and_write (CWP *cw) {
+	/* vorbis_analysis_wrote() must have been called */
+
+	/* Encode and write */
+	while (vorbis_analysis_blockout(&vd,&vb) == 1) {
+		vorbis_analysis(&vb, NULL);
+		vorbis_bitrate_addblock(&vb);
+			while (vorbis_bitrate_flushpacket(&vd,&op)) {
+				ogg_stream_packetin(&os,&op);
+				while (1) {
+					int result = ogg_stream_pageout(&os,&og);
+					if (result == 0) break;
+					fwrite(og.header,1,og.header_len, cw->outfile);
+					fwrite(og.body,1,og.body_len, cw->outfile);
+/*					if(ogg_page_eos(&og)) eos = 1;*/
+				}
+			}
+	}	
+}
+
+
+void encode_buffer (int length, CWP *cw) {
+	int outbytes, i;
+	float **buffer;			/* for OGG enc only */
+
+	switch (cw->encoder) {
+		case MP3:
+			outbytes = lame_encode_buffer(gfp, cw->inpcm, cw->inpcm, length, 
+					cw->mp3buffer, cw->mp3buffer_size);
+			if (outbytes < 0) {
+				fprintf(stderr, "Error: lame_encode_buffer returned %d. "
+						"Exit.\n", outbytes);
+				exit(EXIT_FAILURE);
+			}
+
+			if (fwrite(cw->mp3buffer, sizeof(char), outbytes, cw->outfile) 
+					!= outbytes) {
+				fprintf(stderr, "Error: Writing %db to file failed. Exit.\n", 
+						outbytes);
+				exit(EXIT_FAILURE);
+			}
+			break;
+		case OGG:
+			buffer = vorbis_analysis_buffer(&vd, length);
+			for (i=0; i < length; i++) {
+				buffer[0][i] = (float) cw->inpcm[i]/(1.8*CWAMPLITUDE);
+			}
+			vorbis_analysis_wrote(&vd,i);
+			ogg_encode_and_write(cw);
+			break;
+	} /* switch */
+
+}
+
+
+
+/* vim: noai:ts=4:sw=4 
+ * */
