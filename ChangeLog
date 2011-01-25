@@ -1,4 +1,4 @@
-0.7.1 /              Fabian Kurz   <mail@fkurz.net>
+0.8.0 / 2011-01-25   Fabian Kurz   <mail@fkurz.net>
 	* ebook2cw can now also be compiled to work as a CGI on a webserver
 	* Support for OGG/Vorbis audio file format added
 	* Time of created files is now calculated accurately

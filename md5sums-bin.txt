@@ -1,2 +1,2 @@
-bf132a8dd0b11fbfa7355bae4f9863a8  ebook2cw
-7dee7f3486744325e886b28f05089fb9  ebook2cw.exe
+470c96836525dde6513433eecd5beeb0  ebook2cw.exe
+1ba45566790c8701bcc5f98bd8a25ca3  ebook2cw
