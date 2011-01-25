@@ -1,7 +1,10 @@
 0.7.1 /              Fabian Kurz   <mail@fkurz.net>
 	* ebook2cw can now also be compiled to work as a CGI on a webserver
+	* Support for OGG/Vorbis audio file format added
+	* Time of created files is now calculated accurately
 	* Option to add a noise floor with an user definable SNR added [-N]
-	* Waveform can now be set to sine, sawtooth or squarewave.
+	  (very experimental)
+	* Waveform can now be set to sine, sawtooth or squarewave. [-T]
 	* Config files are searched in current directory, ~/.ebook2cw,
 	  and DESTDIR/share/doc/ebook2cw/examples now. ~/.ebook2cw is
 	  created if only the last is found. [Linux/Unix only]

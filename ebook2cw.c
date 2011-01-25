@@ -139,8 +139,8 @@ void  encode_buffer (int length, CWP *cw);
 void  ogg_encode_and_write (CWP *cw);
 void  help (void);
 void  showcodes (int i);
-void  makeword(char * text, CWP *cw);
-void  closefile (int letter, int chw, CWP *cw);
+int   makeword(char * text, CWP *cw);
+void  closefile (int letter, int chw, int chms, CWP *cw);
 void  openfile (int chapter, CWP *cw);
 void  buf_alloc (CWP *cw);
 void  buf_check (int j, CWP *cw);
@@ -155,6 +155,7 @@ void  fillnoisebuffer (short int *buf, int size, float amplitude);
 void  filterloop (short int *buf, int l, int b);
 void  scalebuffer(short int *buf, int length, float factor);
 void  addbuffer (short int *b1, short int *b2, int l);
+char  *timestring (int ms);
 
 #ifdef CGI
 int   hexit (char c);
@@ -164,10 +165,11 @@ void  urldecode(char *buf);
 /* main */
 
 int main (int argc, char** argv) {
-	int pos, i, c;
+	int pos, i, c, tmp;
  	char word[1024]="";				/* will be cut when > 1024 chars long */
 	int chapter = 0;
 	int chw = 0, tw = 0, qw = 0;	/* chapter words, total words, qrq words */
+	int chms = 0, tms = 0, qms = 0; /* millisec: chapter, total, since qrq */
 	FILE *infile;
 
 #ifdef CGI
@@ -193,7 +195,7 @@ int main (int argc, char** argv) {
 	cw.addnoise = 0;
 	cw.snr = 0;
 
-	cw.encoder = OGG;
+	cw.encoder = MP3;
 
 	cw.samplerate = 11025;
 	cw.brate = 16;
@@ -220,7 +222,7 @@ int main (int argc, char** argv) {
 
 #ifndef CGI
 
-	printf("ebook2cw %s - (c) 2010 by Fabian Kurz, DJ1YFK\n\n", VERSION);
+	printf("ebook2cw %s - (c) 2011 by Fabian Kurz, DJ1YFK\n\n", VERSION);
 
 	/* 
 	 * Find and read ebook2cw.conf 
@@ -310,7 +312,9 @@ int main (int argc, char** argv) {
 			word[pos] = '\0';
 #ifndef CGI
 			if (strcmp(cw.chapterstr, word) == 0) {	/* new chapter */
-				closefile(chapter, chw, &cw);
+				closefile(chapter, chw, chms, &cw);
+				tw += chw;
+				tms += chms;
 				chw = 0;
 				chapter++;
 		
@@ -329,26 +333,28 @@ int main (int argc, char** argv) {
 				command(word, &cw);
 			}
 			else {
-				makeword(mapstring(word, &cw), &cw);
-				chw++; tw++; qw++;
+				tmp = makeword(mapstring(word, &cw), &cw);
+				chms += tmp;
+				qms += tmp;
+				chw++; 
 			}
 
 			word[0] = '\0';
 			pos = 0;
 
-			/* Every 'qrq' minutes (qrq*wpm words), speed up 1 WpM */
-			if (qw == (cw.qrq*cw.wpm)) {
+			/* Every 'cw.qrq' minutes speed up 1 WpM */
+			if (cw.qrq && ((qms/60000.0) > cw.qrq)) {
 				cw.wpm += 1;
 				init_cw(&cw);
 				printf("QRQ: %dwpm\n", cw.wpm);
-				qw = 0;
+				qms = 0;
 			}
 
 		} /* word */
 
 	} /* eof */
 #ifndef CGI
-	closefile(chapter, chw, &cw);
+	closefile(chapter, chw, chms, &cw);
 #else
 	vorbis_analysis_wrote(&vd,0);
 	ogg_encode_and_write(&cw);
@@ -358,9 +364,8 @@ int main (int argc, char** argv) {
 	free(cw.inpcm);
 	free(cw.noisebuf);
 
-	/* factor 0.9 due to many 'words' which aren't actually words, like '\n' */
 #ifndef CGI
-	printf("Total words: %d, total time: %d min\n", tw, (int) ((tw/cw.wpm)*0.9));
+	printf("Total words: %d, total time: %s\n", tw+chw, timestring(tms+chms));
 #endif
 
 	if (cw.encoder == MP3) {
@@ -476,7 +481,7 @@ void init_cw (CWP *cw) {
 /* makeword  --  converts 'text' to CW by concatenating dit_buf amd dah_bufs,
  * encodes this to MP3 and writes to open filehandle outfile */
 
-void makeword(char * text, CWP *cw) {
+int makeword(char * text, CWP *cw) {
  const char *code;				/* CW code as . and - */
 
  int c, i, j, u, w;
@@ -578,17 +583,19 @@ void makeword(char * text, CWP *cw) {
 
  encode_buffer(j, cw); 
 
+ return (int) (1000.0*j/cw->samplerate);
 
 }
 
 
 /* closefile -- finishes writing the current file, flushes the encoder buffer */
 
-void closefile (int chapter, int chw, CWP *cw) {
+void closefile (int chapter, int chw, int chms, CWP *cw) {
 	int outbytes;
 	char outfilename[80] = "";
 
-	printf("words: %d, minutes: %d\n", chw, (int) ((chw/cw->wpm)*0.9));
+	printf("words: %d, time: %s\n", chw, timestring(chms));
+	
 
 	snprintf(outfilename, 80, "%s%04d.%s",  cw->chapterfilename, chapter, 
 			(cw->encoder == MP3) ? "mp3" : "ogg");
@@ -671,8 +678,7 @@ void openfile (int chapter, CWP *cw) {
 
 
 void help (void) {
-	printf("ebook2cw v%s - (c) 2010 by Fabian Kurz, DJ1YFK, http://fkurz.net/\n", VERSION);
-	printf("\nThis is free software, and you are welcome to redistribute it\n"); 
+	printf("This is free software, and you are welcome to redistribute it\n"); 
 	printf("under certain conditions (see COPYING).\n");
 	printf("\n");
 	printf("ebook2cw [-w wpm] [-f freq] [-R risetime] [-F falltime]\n");
@@ -681,10 +687,12 @@ void help (void) {
 	printf("         [-a author] [-t title] [-k comment] [-y year]\n");
 	printf("         [-u] [-S ISO|UTF] [-n] [-e eff.wpm] [-W space]\n");
 	printf("         [-N snr] [-B filter bandwidth] [-C filter center]\n");
+	printf("         [-T 1..3]\n");
 	printf("         [infile]\n\n");
 	printf("defaults: 25 WpM, 600Hz, RT=FT=50, s=11025Hz, b=16kbps,\n");
 	printf("          c=\"CHAPTER\", o=\"Chapter\" infile = stdin\n");
 	printf("\n");
+	printf("Project website: http://fkurz.net/ham/ebook2cw.html\n");
 	exit(EXIT_SUCCESS);
 }
 
@@ -1450,7 +1458,13 @@ void init_encoder (CWP *cw) {
 	}
 	else {	/* OGG */
 		vorbis_info_init(&vi);
+		/*
 		if (vorbis_encode_init_vbr(&vi,1,cw->samplerate,0.7)) {
+			fprintf(stderr, "Failed: vorbis_encode_init_vbr()\n");
+			exit(1);
+		}
+		*/
+		if (vorbis_encode_init(&vi,1,cw->samplerate,32000,16000,8000)) {
 			fprintf(stderr, "Failed: vorbis_encode_init_vbr()\n");
 			exit(1);
 		}
@@ -1525,6 +1539,34 @@ void encode_buffer (int length, CWP *cw) {
 
 }
 
+char *timestring (int ms) {
+	int h = 0, m = 0, s = 0;
+	static char t[32];
+	while (ms > 3600000) {			/* hours */
+		h++;
+		ms -= 3600000;
+	}
+	while (ms > 60000) {			/* minutes */
+		m++;
+		ms -= 60000;
+	}
+	while (ms > 1000) {				/* seconds */
+		s++;
+		ms -= 1000;
+	}
+
+	if (h) {
+		snprintf(t, 31, "%d:%02d:%02d", h, m, s);
+	}
+	else if (m) {
+		snprintf(t, 31, "%02d:%02d", m, s);
+	}
+	else if (s) {
+		snprintf(t, 31, "%ds", s);
+	}
+
+	return t;
+}
 
 
 /* vim: noai:ts=4:sw=4 
