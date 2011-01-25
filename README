@@ -1,4 +1,4 @@
-ebook2cw v0.7.1 - convert ebooks to morse mp3s - Fabian Kurz, DJ1YFK
+ebook2cw v0.8.0 - convert ebooks to morse mp3s - Fabian Kurz, DJ1YFK
 ---------------------------------------------------------------------
 
 Website: http://fkurz.net/ham/ebook2cw.html
@@ -27,4 +27,11 @@ make install
 
 CGI
 ---
-ebook2cw can also be compiled as a CGI, with "make cgi".
+ebook2cw can also be compiled as a CGI, with "make cgi". The executable can
+then be used on a webserver and called in the format
+
+http://example.com/cgi-bin/cw.cgi?s=25&e=25&f=600&t=%20hello%20world
+
+which returns a MP3 file with "hello world" at the given speed etc. The order
+of the GET parameters must be used as shown above. Real-world examples of
+ebook2cw as a CGI can be found at http://lcwo.net/.

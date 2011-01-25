@@ -31,7 +31,7 @@ uninstall:
 	rm -f $(DESTDIR)/share/man/man1/ebook2cw.1
 
 clean:
-	rm -f ebook2cw *~ *.mp3
+	rm -f ebook2cw *~ *.mp3 *.ogg *.cgi
 
 dist:
 	sed 's/v[0-9].[0-9].[0-9]/v$(VERSION)/g' README > README2

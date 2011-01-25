@@ -1,5 +1,5 @@
 @echo off
-echo ebook2cw - Batch file for Windows. 
+echo ebook2cw - Batch file for Windows (obsolete; replaced by ebook2cwgui)
 echo -
 echo Usage: You will be promted for a filename and (at your option)
 echo additional parameters for ebook2cw (such as wpm, tone freq etc).
