@@ -1,10 +1,11 @@
-ebook2cw v0.8.0 - convert ebooks to morse mp3s - Fabian Kurz, DJ1YFK
+ebook2cw v0.8.0 - convert ebooks to morse code - Fabian Kurz, DJ1YFK
 ---------------------------------------------------------------------
 
 Website: http://fkurz.net/ham/ebook2cw.html
 
 ebook2cw is a command line program which converts a plain text ebook to morse
-code MP3 files. It works on several platforms, including Windows and Linux.
+code MP3 or OGG files. It works on several platforms, including Windows and
+Linux.
 
 It automatically splits and numbers the output files by chapters.
 

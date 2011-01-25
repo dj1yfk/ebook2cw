@@ -1,15 +1,15 @@
 .TH ebook2cw 1 "JANUARY 2011" Linux "User Manuals"
 .SH NAME
-ebook2cw \- convert ebooks to morse mp3s
+ebook2cw \- Convert ebooks to Morse code audio files (MP3/OGG)
 .SH SYNOPSIS
 .B ebook2cw 
 [OPTIONS] [INFILE]
 .SH DESCRIPTION
 .B ebook2cw
-ebook2cw is a command line program which converts a plain text ebook to morse
-code MP3 files. It works on several platforms, including Windows and Linux.
+ebook2cw is a command line program which converts a plain text ebook to Morse
+code audio files. It works on several platforms, including Windows and Linux.
 
-A number of CW and MP3 parameters can be changed from their default values, by
+A number of CW and audio parameters can be changed from their default values, by
 command line switches or a config file (see below). These are (default values in brackets):
 
 .B -w wpm 
@@ -45,8 +45,11 @@ reset to the initial value at the start of each chapter. [0]
 .B -F falltime 
 - falltime, samples [50]
 
+.B -O
+- Use OGG/Vorbis encoder instead of MP3
+
 .B -s samplerate 
-- samplerate for the MP3 file [11025]
+- samplerate for the OGG/MP3 file [11025]
 
 .B -b bitrate 
 - MP3 bitrate, kbps [16]
@@ -58,7 +61,7 @@ reset to the initial value at the start of each chapter. [0]
 - Split chapters at this string. [CHAPTER]
 
 .B -o outfile-name 
-- Output filename (chapter number and .mp3 will be appended) [Chapter]
+- Output filename (chapter number and .mp3/.ogg will be appended) [Chapter]
 
 .B -a author
 - Author for the ID3 tag. Use quotes for strings with spaces (e.g. "JW Goethe")
