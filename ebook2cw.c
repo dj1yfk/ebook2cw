@@ -1458,27 +1458,22 @@ void init_encoder (CWP *cw) {
 	}
 	else {	/* OGG */
 		vorbis_info_init(&vi);
-		/*
+		
 		if (vorbis_encode_init_vbr(&vi,1,cw->samplerate,0.7)) {
 			fprintf(stderr, "Failed: vorbis_encode_init_vbr()\n");
 			exit(1);
 		}
-		*/
-		if (vorbis_encode_init(&vi,1,cw->samplerate,32000,16000,8000)) {
-			fprintf(stderr, "Failed: vorbis_encode_init_vbr()\n");
-			exit(1);
-		}
 
-			vorbis_comment_init(&vc);
-			vorbis_comment_add_tag(&vc,"ENCODER","ebook2cw");
-			vorbis_analysis_init(&vd, &vi);
-			vorbis_block_init(&vd, &vb);
-			ogg_stream_init(&os,rand());
+		vorbis_comment_init(&vc);
+		vorbis_comment_add_tag(&vc,"ENCODER","ebook2cw");
+		vorbis_analysis_init(&vd, &vi);
+		vorbis_block_init(&vd, &vb);
+		ogg_stream_init(&os,rand());
 
-			vorbis_analysis_headerout(&vd,&vc,&hdr,&hdr_comm,&hdr_code);
-			ogg_stream_packetin(&os,&hdr); 
-			ogg_stream_packetin(&os,&hdr_comm);
-			ogg_stream_packetin(&os,&hdr_code);
+		vorbis_analysis_headerout(&vd,&vc,&hdr,&hdr_comm,&hdr_code);
+		ogg_stream_packetin(&os,&hdr); 
+		ogg_stream_packetin(&os,&hdr_comm);
+		ogg_stream_packetin(&os,&hdr_code);
 
 	}
 
