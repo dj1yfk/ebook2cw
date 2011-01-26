@@ -355,17 +355,12 @@ int main (int argc, char** argv) {
 	} /* eof */
 #ifndef CGI
 	closefile(chapter, chw, chms, &cw);
-#else
-	vorbis_analysis_wrote(&vd,0);
-	ogg_encode_and_write(&cw);
-#endif
-
-	free(cw.mp3buffer);
-	free(cw.inpcm);
-	free(cw.noisebuf);
-
-#ifndef CGI
 	printf("Total words: %d, total time: %s\n", tw+chw, timestring(tms+chms));
+#else
+	if (cw.encoder == OGG) {
+		vorbis_analysis_wrote(&vd,0);
+		ogg_encode_and_write(&cw);
+	}
 #endif
 
 	if (cw.encoder == MP3) {
@@ -378,6 +373,10 @@ int main (int argc, char** argv) {
 		vorbis_comment_clear(&vc);
 		vorbis_info_clear(&vi);
 	}
+	
+	free(cw.mp3buffer);
+	free(cw.inpcm);
+	free(cw.noisebuf);
 
 	return (EXIT_SUCCESS);
 }
