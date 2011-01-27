@@ -156,6 +156,7 @@ void  filterloop (short int *buf, int l, int b);
 void  scalebuffer(short int *buf, int length, float factor);
 void  addbuffer (short int *b1, short int *b2, int l);
 char  *timestring (int ms);
+void  guessencoding (char *filename);
 
 #ifdef CGI
 int   hexit (char c);
@@ -230,7 +231,7 @@ int main (int argc, char** argv) {
 
 	readconfig(&cw);
 
-	while((i=getopt(argc,argv, "Oo:w:W:e:f:uc:k:Q:R:pF:s:b:q:a:t:y:S:hnT:N:B:C:"))!= -1){
+	while((i=getopt(argc,argv, "Oo:w:W:e:f:uc:k:Q:R:pF:s:b:q:a:t:y:S:hnT:N:B:C:g:"))!= -1){
 		setparameter(i, optarg, &cw);
 	} 
 
@@ -686,7 +687,7 @@ void help (void) {
 	printf("         [-a author] [-t title] [-k comment] [-y year]\n");
 	printf("         [-u] [-S ISO|UTF] [-n] [-e eff.wpm] [-W space]\n");
 	printf("         [-N snr] [-B filter bandwidth] [-C filter center]\n");
-	printf("         [-T 1..3]\n");
+	printf("         [-T 1..3] [-g filename]\n");
 	printf("         [infile]\n\n");
 	printf("defaults: 25 WpM, 600Hz, RT=FT=50, s=11025Hz, b=16kbps,\n");
 	printf("          c=\"CHAPTER\", o=\"Chapter\" infile = stdin\n");
@@ -1025,6 +1026,9 @@ void setparameter (char i, char *value, CWP *cw) {
 				break;
 			case 'p':
 				cw->pBT = 0;
+				break;
+			case 'g':
+				guessencoding(value);
 				break;
 			case 'h':
 				help();
@@ -1560,6 +1564,40 @@ char *timestring (int ms) {
 	}
 
 	return t;
+}
+
+
+/* tries to guess the encoding (UTF8, ISO8859-1) of a file 
+ * 
+ * Indicator for UTF-8 (2-byte chars): 110xxxxx 10xxxxxx
+ *
+ */
+
+void guessencoding (char *filename) {
+	FILE *infile;
+	unsigned int c;
+	int is_iso   = 1;
+
+	if ((infile = fopen(filename, "r")) == NULL) {
+		fprintf(stderr, "Error: Cannot open file %s. Exit.\n", filename);
+		exit(EXIT_FAILURE);
+	}
+
+	printf("Guessed file format of %s: ", filename);
+
+	while ((c = getc(infile)) != EOF) {
+		if ((c & 192) == 192) {		/* check if highest 3 bits are 110=224 */
+			c = getc(infile);		/* next byte 10xxxxxx? */
+			if ((c & 128) == 128) {
+				is_iso = 0;
+				break;
+			}
+		}
+	}
+
+	printf("%s\n\n", (is_iso ? "ISO 8859-1" : "UTF-8")); 
+
+	exit(EXIT_SUCCESS);
 }
 
 

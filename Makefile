@@ -1,6 +1,6 @@
 # ebook2cw Makefile -- Fabian Kurz, DJ1YFK -- http://fkurz.net/ham/ebook2cw.html
 
-VERSION=0.8.0
+VERSION=0.8.1
 DESTDIR ?= /usr
 
 all: ebook2cw
