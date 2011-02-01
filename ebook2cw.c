@@ -1586,9 +1586,9 @@ void guessencoding (char *filename) {
 	printf("Guessed file format of %s: ", filename);
 
 	while ((c = getc(infile)) != EOF) {
-		if ((c & 192) == 192) {		/* check if highest 3 bits are 110=224 */
+		if ((c & 224) == 192) {		/* check if highest 3 bits are 110=224 */
 			c = getc(infile);		/* next byte 10xxxxxx? */
-			if ((c & 128) == 128) {
+			if ((c & 192) == 128) {
 				is_iso = 0;
 				break;
 			}
