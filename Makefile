@@ -3,16 +3,32 @@
 VERSION=0.8.1
 DESTDIR ?= /usr
 
+# Set to NO to compile without Lame/Ogg-vorbis support
+USE_LAME?=YES
+USE_OGG?=YES
+
+CFLAGS:=$(CFLAGS) -D DESTDIR=\"$(DESTDIR)\" -D VERSION=\"$(VERSION)\"
+
+ifeq ($(USE_LAME), YES)
+		CFLAGS:=$(CFLAGS) -D LAME
+		LDFLAGS:=$(LDFLAGS) -lmp3lame 
+endif
+ifeq ($(USE_OGG), YES)
+		CFLAGS:=$(CFLAGS) -D OGGV
+		LDFLAGS:=$(LDFLAGS) -lvorbis -lvorbisenc -logg
+endif
+
+
 all: ebook2cw
 
 ebook2cw: ebook2cw.c codetables.h
-	gcc ebook2cw.c -pedantic -Wall -lm -lmp3lame -lvorbis -lvorbisenc -D DESTDIR=\"$(DESTDIR)\" -D VERSION=\"$(VERSION)\" -o ebook2cw
+	gcc ebook2cw.c -pedantic -Wall -lm $(LDFLAGS) $(CFLAGS) -o ebook2cw
 
 cgi: ebook2cw.c codetables.h
-	gcc -static ebook2cw.c -lvorbis -lvorbisenc -logg -lmp3lame -lm -D DESTDIR=\"$(DESTDIR)\" -D VERSION=\"$(VERSION)\" -D CGI -o cw.cgi
+	gcc -static ebook2cw.c $(LDFLAGS) -lm $(CFLAGS) -D CGI -o cw.cgi
 
 static:
-	gcc -static ebook2cw.c -lvorbis -lvorbisenc -logg -lmp3lame -lm -D DESTDIR=\"$(DESTDIR)\" -D VERSION=\"$(VERSION)\" -o ebook2cw
+	gcc -static ebook2cw.c $(LDFLAGS) -lm $(CFLAGS) -o ebook2cw
 
 install:
 	install -d -v                      $(DESTDIR)/share/man/man1/

@@ -22,9 +22,13 @@ Statically compiled binaries are available at the project website, for Linux
 2) Source
 A Makefile is included; it compiles both under Linux and Windows (with MinGW).
 DESTDIR is /usr by default (so the binary will be in /usr/bin/).
+Support for LAME and/or OGG can be disabled by USE_LAME=NO and USE_OGG=NO
+respectively.
 
-make [DESTDIR=..]
+make [DESTDIR=..] [USE_OGG=NO] [USE_LAME=NO]
 make install
+
+
 
 CGI
 ---

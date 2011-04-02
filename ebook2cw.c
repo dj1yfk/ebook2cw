@@ -19,9 +19,12 @@ Street, Fifth Floor, Boston, MA  02110-1301, USA.
 source code looks properly indented with ts=4
 
 */
-
+#ifdef LAME
 #include <lame/lame.h>
+#endif
+#ifdef OGGV
 #include <vorbis/vorbisenc.h>
+#endif
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -51,6 +54,7 @@ source code looks properly indented with ts=4
 
 #define MP3 0
 #define OGG 1
+#define NOENC 2
 
 #define SINE 0
 #define SAWTOOTH 1
@@ -59,9 +63,12 @@ source code looks properly indented with ts=4
 #define NOISEAMPLITUDE (10000.0)
 #define CWAMPLITUDE (20000.0)
 
+#ifdef LAME
 /* Global for LAME */
 lame_global_flags *gfp;
+#endif
 
+#ifdef OGGV
 /* Globals for OGG/Vorbis */
 ogg_stream_state os;
 ogg_page         og;
@@ -70,6 +77,7 @@ vorbis_info      vi;
 vorbis_comment   vc; 
 vorbis_dsp_state vd; 
 vorbis_block     vb;
+#endif
 
 /* Struct CWP to keep all CW parameters */
 
@@ -196,7 +204,11 @@ int main (int argc, char** argv) {
 	cw.addnoise = 0;
 	cw.snr = 0;
 
+#ifdef LAME
 	cw.encoder = MP3;
+#else
+	cw.encoder = OGG;
+#endif
 
 	cw.samplerate = 11025;
 	cw.brate = 16;
@@ -231,7 +243,7 @@ int main (int argc, char** argv) {
 
 	readconfig(&cw);
 
-	while((i=getopt(argc,argv, "Oo:w:W:e:f:uc:k:Q:R:pF:s:b:q:a:t:y:S:hnT:N:B:C:g:"))!= -1){
+	while((i=getopt(argc,argv, "XOo:w:W:e:f:uc:k:Q:R:pF:s:b:q:a:t:y:S:hnT:N:B:C:g:"))!= -1){
 		setparameter(i, optarg, &cw);
 	} 
 
@@ -317,6 +329,7 @@ int main (int argc, char** argv) {
 				tw += chw;
 				tms += chms;
 				chw = 0;
+				chms = 0;
 				chapter++;
 		
 				if (cw.qrq && cw.reset) {	
@@ -359,20 +372,26 @@ int main (int argc, char** argv) {
 	printf("Total words: %d, total time: %s\n", tw+chw, timestring(tms+chms));
 #else
 	if (cw.encoder == OGG) {
+#ifdef OGGV
 		vorbis_analysis_wrote(&vd,0);
 		ogg_encode_and_write(&cw);
+#endif
 	}
 #endif
 
 	if (cw.encoder == MP3) {
+#ifdef LAME
 		lame_close(gfp);
+#endif
 	}
 	else {
+#ifdef OGGV
 		ogg_stream_clear(&os);
 		vorbis_block_clear(&vb);
 		vorbis_dsp_clear(&vd);
 		vorbis_comment_clear(&vc);
 		vorbis_info_clear(&vi);
+#endif
 	}
 	
 	free(cw.mp3buffer);
@@ -531,15 +550,16 @@ int makeword(char * text, CWP *cw) {
 
 	if (last) continue;				/* first of two-byte character read */
 
-	/* Not found anything ... */
+	/* Not found anything, produce error message depending on term charset */
+
 	if (code == NULL) {
-		code = " ";
 		if (c < 255) {
 			fprintf(stderr, "Warning: don't know CW for '%c'\n", c);
 		}
 		else {
 			fprintf(stderr, "Warning: don't know CW for unicode &#%d;\n", c);
 		}
+		code = " ";
 
 	}
 
@@ -594,6 +614,8 @@ void closefile (int chapter, int chw, int chms, CWP *cw) {
 	int outbytes;
 	char outfilename[80] = "";
 
+	outbytes = 0;
+
 	printf("words: %d, time: %s\n", chw, timestring(chms));
 	
 
@@ -603,6 +625,7 @@ void closefile (int chapter, int chw, int chms, CWP *cw) {
 
 	switch (cw->encoder) {
 		case MP3:
+#ifdef LAME
 			outbytes = lame_encode_flush(gfp,cw->mp3buffer, cw->mp3buffer_size);
  
 			if (outbytes < 0) {
@@ -617,15 +640,21 @@ void closefile (int chapter, int chw, int chms, CWP *cw) {
 						outbytes);
 				exit(EXIT_FAILURE);
 			}
+#endif
 			break;
 		case OGG:
+#ifdef OGGV
 			vorbis_analysis_wrote(&vd,0);
 			ogg_encode_and_write(cw);
+#endif
 			break;
-
+		case NOENC:
+			/* Do nothing */
+			break;
 	}
 
- fclose(cw->outfile);
+	if (cw->encoder != NOENC) 
+		fclose(cw->outfile);
 }
 
 
@@ -633,30 +662,38 @@ void closefile (int chapter, int chw, int chms, CWP *cw) {
 
 void openfile (int chapter, CWP *cw) {
 	char outfilename[80] = "";
+#ifdef LAME
 	static char tmp[80] = "";
+#endif
+#ifdef OGGV
 	ogg_packet       hdr;
 	ogg_packet       hdr_comm;
 	ogg_packet       hdr_code;
+#endif
 
 	snprintf(outfilename, 80, "%s%04d.%s",  cw->chapterfilename, chapter, 
 			(cw->encoder == MP3) ? "mp3" : "ogg");
 	printf("Starting %s\n",  outfilename);
  
-	if ((cw->outfile = fopen(outfilename, "wb")) == NULL) {
+	if ((cw->encoder != NOENC) && 
+			(cw->outfile = fopen(outfilename, "wb")) == NULL) {
 		fprintf(stderr, "Error: Failed to open %s\n", outfilename);
 		exit(EXIT_FAILURE);
 	}
 
 	switch (cw->encoder) {
 		case MP3:
+#ifdef LAME
 			snprintf(tmp, 79, "%s - %d", cw->id3_title, chapter);	/* title */
 			id3tag_init(gfp);
 			id3tag_set_artist(gfp, cw->id3_author);
 			id3tag_set_year(gfp, cw->id3_year);
 			id3tag_set_title(gfp, tmp);
 			id3tag_set_comment(gfp, cw->id3_comment);
+#endif
 			break;
 		case OGG:
+#ifdef OGGV
 			vorbis_comment_init(&vc);
 			vorbis_comment_add_tag(&vc,"ENCODER","ebook2cw");
 			vorbis_analysis_init(&vd, &vi);
@@ -671,6 +708,10 @@ void openfile (int chapter, CWP *cw) {
 				fwrite(og.header,1,og.header_len,cw->outfile);
 				fwrite(og.body,1,og.body_len,cw->outfile);
 			}
+#endif
+			break;
+		case NOENC:
+			/* Do nothing */
 			break;
 	}
 
@@ -691,6 +732,20 @@ void help (void) {
 	printf("         [infile]\n\n");
 	printf("defaults: 25 WpM, 600Hz, RT=FT=50, s=11025Hz, b=16kbps,\n");
 	printf("          c=\"CHAPTER\", o=\"Chapter\" infile = stdin\n");
+	printf("\n");
+	printf("Compile options: USE_LAME="
+#ifdef LAME
+		"YES "
+#else
+		"NO "
+#endif
+		"USE_OGG="
+#ifdef OGGV
+		"YES "
+#else
+		"NO "
+#endif
+		"DESTDIR="DESTDIR"\n");
 	printf("\n");
 	printf("Project website: http://fkurz.net/ham/ebook2cw.html\n");
 	exit(EXIT_SUCCESS);
@@ -1022,7 +1077,14 @@ void setparameter (char i, char *value, CWP *cw) {
 				cw->reset = 0;
 				break;
 			case 'O':
+#ifdef OGGV
 				cw->encoder = OGG;
+#else
+				fprintf(stderr, "Warning: ebook2cw was compiled without OGG support! Using Lame encoder.\n\n");
+#endif
+				break;
+			case 'X':					/* "Fake" */
+				cw->encoder = NOENC;
 				break;
 			case 'p':
 				cw->pBT = 0;
@@ -1442,11 +1504,14 @@ void addbuffer (short int *b1, short int *b2, int l) {
 
 
 void init_encoder (CWP *cw) {
+#ifdef OGGV
 	ogg_packet       hdr;
 	ogg_packet       hdr_comm;
 	ogg_packet       hdr_code;
+#endif
 
 	if (cw->encoder == MP3) {
+#ifdef LAME
 		gfp = lame_init();
 		lame_set_num_channels(gfp,1);
 		lame_set_in_samplerate(gfp, cw->samplerate);
@@ -1458,8 +1523,10 @@ void init_encoder (CWP *cw) {
 			fprintf(stderr, "Failed: lame_init_params(gfp) \n");
 			exit(1);
 		}
+#endif
 	}
 	else {	/* OGG */
+#ifdef OGGV
 		vorbis_info_init(&vi);
 		
 		if (vorbis_encode_init_vbr(&vi,1,cw->samplerate,0.7)) {
@@ -1477,7 +1544,7 @@ void init_encoder (CWP *cw) {
 		ogg_stream_packetin(&os,&hdr); 
 		ogg_stream_packetin(&os,&hdr_comm);
 		ogg_stream_packetin(&os,&hdr_code);
-
+#endif
 	}
 
 }
@@ -1485,7 +1552,7 @@ void init_encoder (CWP *cw) {
 
 void ogg_encode_and_write (CWP *cw) {
 	/* vorbis_analysis_wrote() must have been called */
-
+#ifdef OGGV
 	/* Encode and write */
 	while (vorbis_analysis_blockout(&vd,&vb) == 1) {
 		vorbis_analysis(&vb, NULL);
@@ -1501,15 +1568,22 @@ void ogg_encode_and_write (CWP *cw) {
 				}
 			}
 	}	
+#endif
 }
 
 
 void encode_buffer (int length, CWP *cw) {
-	int outbytes, i;
+#ifdef LAME
+	int outbytes;
+#endif
+#ifdef OGGV
+	int i;
 	float **buffer;			/* for OGG enc only */
+#endif
 
 	switch (cw->encoder) {
 		case MP3:
+#ifdef LAME
 			outbytes = lame_encode_buffer(gfp, cw->inpcm, cw->inpcm, length, 
 					cw->mp3buffer, cw->mp3buffer_size);
 			if (outbytes < 0) {
@@ -1524,14 +1598,20 @@ void encode_buffer (int length, CWP *cw) {
 						outbytes);
 				exit(EXIT_FAILURE);
 			}
+#endif
 			break;
 		case OGG:
+#ifdef OGGV
 			buffer = vorbis_analysis_buffer(&vd, length);
 			for (i=0; i < length; i++) {
 				buffer[0][i] = (float) cw->inpcm[i]/(1.8*CWAMPLITUDE);
 			}
 			vorbis_analysis_wrote(&vd,i);
 			ogg_encode_and_write(cw);
+#endif
+			break;
+		case NOENC:
+			/* do nothing at all */
 			break;
 	} /* switch */
 
