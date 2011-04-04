@@ -65,7 +65,7 @@
 
 0.2.0 / 2007-11-27   Fabian Kurz   <mail@fkurz.net>
 
-	* Fixed handling of umlauts (цдья)
+	* Fixed handling of umlauts
 	* The chapter separator is now case sensitive.
 
 0.1.0 / 2007-11-22   Fabian Kurz   <mail@fkurz.net>
