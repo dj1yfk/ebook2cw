@@ -43,17 +43,18 @@ their default values, by command line switches or a config file (see below).  Th
 	<li><strong>-R risetime</strong> - risetime of the CW signal, in samples [50]</li>
 	<li><strong>-F falltime</strong> - falltime, samples [50]</li>
 	<li><strong>-O</strong> - Generate an OGG-File instead of MP3</li>
+	<li><strong>-X</strong> - Test mode, do not generate any files</li>
 	<li><strong>-s samplerate</strong> - samplerate for the audio file [11025]</li>
 	<li><strong>-b bitrate</strong> - MP3 bitrate, kbps [16]</li>
 	<li><strong>-q quality</strong> - MP3 quality, 1 (best) to 9 (worst) [5]</li>
 	<li><strong>-c chapter separator</strong> - Split chapters at this string [CHAPTER]</li>
-	<li><strong>-o outfile-name</strong> - Output filename (chapter number and .mp3 will be appended) [Chapter]</li>
+	<li><strong>-o outfile-name</strong> - Output filename (chapter number and .mp3/.ogg will be appended) [Chapter]</li>
 	<li><strong>-a author</strong> - Author for the <a href="http://en.wikipedia.org/wiki/ID3">ID3 tag</a>. Use quotes for strings with  spaces (e.g. "JW Goethe")</li>
 	<li><strong>-t title</strong>  -  Title for the ID3 tag. Use quotes for strings with spaces (e.g. "Faust II")</li>
 	<li><strong>-k comment</strong> - Comment for the ID3  tag.  Use  quotes  for  strings  with spaces.</li>
 	<li><strong>-y year</strong> - Year for the ID3 tag.</li>
 	<li><strong>-u</strong> - Enables UTF-8 support (so far supported: Latin, Cyrillic, Greek, Hebrew and Arabic).</li>
-	<li><strong>-g file</strong> - Guesses the encoding of `file` (ISO 8859-1 / ASCII or UTF-8).</li>
+	<li><strong>-g file</strong> - Guesses the encoding of a text file (ISO 8859-1 / ASCII or UTF-8).</li>
 	<li><strong>-S</strong> [UTF|ISO] - Prints a table of the available <a href="#codes">character sets</a> and CW symbols in HTML format.</li>
 	<li><strong>-N snr</strong> - Adds a background noise with any SNR from -10 to 10. Negative values must be in quotation marks (e.g. "-3").
 	<li><strong>-B bandwidth</strong> - Filter bandwidth in Hz for the noise. Available filters: 100, 500, 1000, 2100Hz. [500]
@@ -90,9 +91,9 @@ Starting Book-0000.mp3
 words: 12, time: 10s
 Finishing Book-0000.mp3
 
-Starting Book-0002.mp3
+Starting Book-0001.mp3
 words: 1142, time: 16:12s
-Finishing Book-0002.mp3
+Finishing Book-0001.mp3
 
 Total words: 1154, total time: 16:22s
 </code></pre></div>
