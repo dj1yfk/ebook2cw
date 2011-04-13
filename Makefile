@@ -1,6 +1,6 @@
 # ebook2cw Makefile -- Fabian Kurz, DJ1YFK -- http://fkurz.net/ham/ebook2cw.html
 
-VERSION=0.8.1
+VERSION=0.8.2
 DESTDIR ?= /usr
 
 # Set to NO to compile without Lame/Ogg-vorbis support
@@ -45,6 +45,7 @@ install:
 uninstall:
 	rm -f $(DESTDIR)/bin/ebook2cw
 	rm -f $(DESTDIR)/share/man/man1/ebook2cw.1
+	rm -rf $(DESTDIR)/share/doc/ebook2cw
 
 clean:
 	rm -f ebook2cw *~ *.mp3 *.ogg *.cgi
