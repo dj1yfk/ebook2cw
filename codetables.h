@@ -3,6 +3,8 @@
  * This file is part of ebook2cw and may be used under the same terms (GPL)
  * (C) 2008 Fabian Kurz, DJ1YFK 
  *
+ * $Id$
+ *
  * Currently included: ISO 8859-1
  *                      - complete (all that can somehow be mapped)
  *                     Unicode: 
