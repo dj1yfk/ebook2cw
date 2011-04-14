@@ -1,4 +1,4 @@
-0.8.1 / 2011-01-25   Fabian Kurz   <mail@fkurz.net>
+0.8.1 / 2011-04-04   Fabian Kurz   <mail@fkurz.net>
 	* Guessing of file encoding added (-g filename).
 	* MP3 CGI fixed (crashed because OGG/Vorbis libs were called)
 	* Chapter time now properly resetted after each chapter
