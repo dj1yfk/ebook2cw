@@ -33,6 +33,7 @@ source code looks properly indented with ts=4
 #include <stdlib.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <time.h>
 
 /* for mkdir, not used on Windows */
 #if !__MINGW32__
@@ -181,6 +182,7 @@ int main (int argc, char** argv) {
 	int chapter = 0;
 	int chw = 0, tw = 0, qw = 0;	/* chapter words, total words, qrq words */
 	int chms = 0, tms = 0, qms = 0; /* millisec: chapter, total, since qrq */
+	time_t start_time, end_time;	/* conversion time */
 	FILE *infile;
 
 #ifdef CGI
@@ -236,6 +238,7 @@ int main (int argc, char** argv) {
 	infile = stdin;
 
 #ifndef CGI
+	start_time = time(NULL);
 
 	printf("ebook2cw %s - (c) 2011 by Fabian Kurz, DJ1YFK\n\n", VERSION);
 
@@ -371,7 +374,12 @@ int main (int argc, char** argv) {
 	} /* eof */
 #ifndef CGI
 	closefile(chapter, chw, chms, &cw);
+	end_time = time(NULL);
 	printf("Total words: %d, total time: %s\n", tw+chw, timestring(tms+chms));
+	printf("Conversion time: %s (Speedup: %.1fx)\n", 
+			timestring(1000.0 * difftime(end_time, start_time)), 
+			((tms+chms)/(1000.0 * difftime(end_time,start_time)))
+	);
 #else
 	if (cw.encoder == OGG) {
 #ifdef OGGV
