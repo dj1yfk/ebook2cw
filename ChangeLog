@@ -1,3 +1,6 @@
+0.8.2 / 2011-  -     Fabian Kurz   <mail@fkurz.net>
+	* Time of conversion and speedup calculations
+
 0.8.1 / 2011-04-04   Fabian Kurz   <mail@fkurz.net>
 	* Guessing of file encoding added (-g filename).
 	* MP3 CGI fixed (crashed because OGG/Vorbis libs were called)

@@ -1648,7 +1648,7 @@ char *timestring (int ms) {
 	else if (m) {
 		snprintf(t, 31, "%02d:%02d", m, s);
 	}
-	else if (s) {
+	else {
 		snprintf(t, 31, "%ds", s);
 	}
 
