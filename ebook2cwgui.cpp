@@ -98,9 +98,7 @@ Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1,
 	wxBoxSizer *vbox = new wxBoxSizer(wxVERTICAL);
 
 	wxBoxSizer *hbox1 = new wxBoxSizer(wxHORIZONTAL);
-	wxBoxSizer *hbox2 = new wxBoxSizer(wxHORIZONTAL);
 	wxBoxSizer *hbox3 = new wxBoxSizer(wxHORIZONTAL);
-	wxBoxSizer *hbox4 = new wxBoxSizer(wxHORIZONTAL);
 	wxBoxSizer *hbox5 = new wxBoxSizer(wxHORIZONTAL);
 	wxBoxSizer *hbox6 = new wxBoxSizer(wxHORIZONTAL);
 
@@ -132,8 +130,8 @@ Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1,
 
 	wxStaticText *t_chapsep =  new wxStaticText(panel, wxID_ANY, 
 			wxT("Chapter separator string:"));
-	wxTextCtrl *tc_chapsep = new wxTextCtrl(panel, E2C_chapterstring,
-			h[wxT("c")]);
+	wxTextCtrl *tc_chapsep = new wxTextCtrl(panel, E2C_chapterstring);
+	tc_chapsep->ChangeValue(h[wxT("c")]);
 	hbox5->Add(t_chapsep, 1);
 	hbox5->Add(tc_chapsep, 2, wxEXPAND);
 
@@ -194,19 +192,24 @@ Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1,
 	wxStaticBoxSizer *sbox2=new wxStaticBoxSizer(box_outparam, wxVERTICAL);
 	
 	wxStaticText *t_filename =  new wxStaticText(panel, wxID_ANY, wxT("Filename:"));
-	wxTextCtrl   *tc_filename = new wxTextCtrl(panel, E2C_outfile, h[wxT("o")]);
+	wxTextCtrl   *tc_filename = new wxTextCtrl(panel, E2C_outfile);
+	tc_filename->ChangeValue(h[wxT("o")]);
 
 	wxStaticText *t_author =  new wxStaticText(panel, wxID_ANY, wxT("Author:"));
-	wxTextCtrl   *tc_author = new wxTextCtrl(panel, E2C_author, h[wxT("a")]);
+	wxTextCtrl   *tc_author = new wxTextCtrl(panel, E2C_author);
+	tc_author->ChangeValue(h[wxT("a")]);
 
 	wxStaticText *t_title =  new wxStaticText(panel, wxID_ANY, wxT("Title:"));
-	wxTextCtrl   *tc_title = new wxTextCtrl(panel, E2C_title, h[wxT("t")]);
+	wxTextCtrl   *tc_title = new wxTextCtrl(panel, E2C_title);
+	tc_title->ChangeValue(h[wxT("t")]);
 	
 	wxStaticText *t_comment =  new wxStaticText(panel, wxID_ANY, wxT("Comment:"));
-	wxTextCtrl   *tc_comment = new wxTextCtrl(panel, E2C_comment, h[wxT("k")]);
+	wxTextCtrl   *tc_comment = new wxTextCtrl(panel, E2C_comment);
+	tc_comment->ChangeValue(h[wxT("k")]);
 	
 	wxStaticText *t_year=  new wxStaticText(panel, wxID_ANY, wxT("Year:"));
-	wxTextCtrl   *tc_year = new wxTextCtrl(panel, E2C_year, h[wxT("y")]);
+	wxTextCtrl   *tc_year = new wxTextCtrl(panel, E2C_year);
+	tc_comment->ChangeValue(h[wxT("y")]);
 	
 	wxStaticText *t_format=  new wxStaticText(panel, wxID_ANY, wxT("File Format:"));
 	wxString formats[2] = {wxT("MP3"), wxT("OGG")};
@@ -266,7 +269,6 @@ Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1,
 
 	panel->SetSizer(vbox);
 	Centre();
-
 }
 
 
@@ -322,18 +324,12 @@ void Ebook2cw::Convert(wxCommandEvent & WXUNUSED(event)) {
 	/* sanity check: We need at least an input file and out dir */
 
 	if (!wxFileExists(InFilename)) {
-		wxMessageDialog *err = new wxMessageDialog(NULL, 
-		      wxT("Please chose an input file (ebook)!"), wxT("Error"), 
-		      wxOK | wxICON_ERROR);
-   		err->ShowModal();
+		wxMessageBox(wxT("Please select an input file!"), wxT("Error"), wxOK | wxICON_EXCLAMATION);
 		return;
 	}
 
 	if (!wxDirExists(OutDir)) {
-		wxMessageDialog *err = new wxMessageDialog(NULL, 
-		      wxT("Please chose a directory for the output files!"), wxT("Error"), 
-		      wxOK | wxICON_ERROR);
-   		err->ShowModal();
+		wxMessageBox(wxT("Please select an output directory!"), wxT("Error"), wxOK | wxICON_EXCLAMATION);
 		return;
 	}
 
@@ -366,7 +362,11 @@ void Ebook2cw::Convert(wxCommandEvent & WXUNUSED(event)) {
 	wxString oldcwd = wxGetCwd();
 	wxSetWorkingDirectory(OutDir);
 
-	wxShell(command);
+#ifdef __WXMSW__
+	wxShell(oldcwd + wxT("\\") + command);
+#else
+	wxShell(command);	/* ebook2cw in PATH */
+#endif
 
 	wxSetWorkingDirectory(oldcwd);
 	
@@ -395,7 +395,7 @@ void Ebook2cw::OnToneChange (wxSpinEvent & event) {
 }
 
 void Ebook2cw::OnWaveChange (wxCommandEvent & event) { 
-	h[wxT("T")] = event.GetString(); 
+	h[wxT("T")] = event.GetString().Upper(); 
 }
 
 
@@ -470,6 +470,7 @@ void Ebook2cw::ReadConfigFile () {
 	wxTextFile file(cfile);
 	file.Open();
 
+	(void) file.GetFirstLine();
 	while (!file.Eof()) {
 		line = file.GetNextLine();
 		if (line.Mid(1,1) == wxT("=")) {
@@ -511,6 +512,7 @@ void Ebook2cw::SaveConfigFile(wxCommandEvent & event) {
 
 		/* We overwrite the whole [settings] part but [mappings]
 		 * must be saved */
+		file.GetFirstLine(); /* throw away */
 		while (!file.Eof()) {
 			line = file.GetNextLine();
 			if (line.Mid(0,10) == wxT("[mappings]")) 
@@ -527,6 +529,7 @@ void Ebook2cw::SaveConfigFile(wxCommandEvent & event) {
 
 	file.AddLine(wxT("# ebook2cw config written by ebook2cw-gui - http://fkurz.net/ham/ebook2cw.html"));
 	file.AddLine(wxT("[settings]"));
+
 
 	ParamH::iterator it;
 	for (it = h.begin(); it != h.end(); ++it) {

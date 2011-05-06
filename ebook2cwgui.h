@@ -62,6 +62,7 @@ class Ebook2cw : public wxFrame
 		wxString OutDir;
 		wxString AddParam;
 		bool ResetQrq, NoBT;
+		bool initialized;
 		void ReadConfigFile();
 		void SaveConfigFile(wxCommandEvent & event);
 		wxString FindConfigFile();
