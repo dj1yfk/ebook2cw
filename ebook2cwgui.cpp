@@ -84,6 +84,14 @@ Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1,
 
 	long tmp;
 
+#ifdef __WXMSW__
+	int spinX = 50;
+	int spinY = 21;
+#else
+	int spinX= wxDefaultSize.x;
+	int spinY= wxDefaultSize.y;
+#endif	
+
 	//SetIcon(wxIcon(wxT("ebook2cw.xpm")));
 	CreateStatusBar();
 	SetStatusText(wxT("Initializing ebook2cw-gui"));
@@ -155,27 +163,27 @@ Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1,
 	wxStaticText *t_wpm =  new wxStaticText(panel, wxID_ANY, wxT("Speed (WpM):"));
 	h[wxT("w")].ToLong(&tmp);
 	wxSpinCtrl *spin_wpm = new wxSpinCtrl(panel, E2C_wpm, wxEmptyString, wxDefaultPosition,
-		       wxSize(50,21), wxSP_ARROW_KEYS, 5, 150, tmp);
+		       wxSize(spinX,spinY), wxSP_ARROW_KEYS, 5, 150, tmp);
 	
 	wxStaticText *t_wpme =  new wxStaticText(panel, wxID_ANY, wxT("eff. Speed (WpM):"));
 	h[wxT("e")].ToLong(&tmp);
 	wxSpinCtrl *spin_wpme = new wxSpinCtrl(panel, E2C_wpme, wxEmptyString, wxDefaultPosition,
-		wxSize(50,21), wxSP_ARROW_KEYS, 0, 150, tmp);
+		wxSize(spinX,spinY), wxSP_ARROW_KEYS, 0, 150, tmp);
 	
 	wxStaticText *t_ews =  new wxStaticText(panel, wxID_ANY, wxT("extra Word space:"));
 	h[wxT("W")].ToLong(&tmp);
 	wxSpinCtrl *spin_ews = new wxSpinCtrl(panel, E2C_ews, wxEmptyString, wxDefaultPosition,
-			                       wxSize(50,21), wxSP_ARROW_KEYS, 0, 10, tmp);
+			                       wxSize(spinX,spinY), wxSP_ARROW_KEYS, 0, 10, tmp);
 	
 	wxStaticText *t_qrq =  new wxStaticText(panel, wxID_ANY, wxT("QRQ (mins, 0 = off):"));
 	h[wxT("Q")].ToLong(&tmp);
 	wxSpinCtrl *spin_qrq = new wxSpinCtrl(panel, E2C_qrq, wxEmptyString, wxDefaultPosition,
-			                       wxSize(50,21), wxSP_ARROW_KEYS, 0, 60, tmp);
+			                       wxSize(spinX,spinY), wxSP_ARROW_KEYS, 0, 60, tmp);
 	
 	wxStaticText *t_tone =  new wxStaticText(panel, wxID_ANY, wxT("Tone (Hz):"));
 	h[wxT("f")].ToLong(&tmp);
 	wxSpinCtrl *spin_tone = new wxSpinCtrl(panel, E2C_tone, wxEmptyString, wxDefaultPosition,
-			                       wxSize(50,20), wxSP_ARROW_KEYS, 200, 1000, tmp);
+			                       wxSize(spinX,spinY), wxSP_ARROW_KEYS, 200, 1000, tmp);
 
 	wxStaticText *t_wave =  new wxStaticText(panel, wxID_ANY, wxT("Waveform:"));
 	wxString choices[3] = {wxT("Sine"), wxT("Sawtooth"), wxT("Square")};
@@ -260,6 +268,8 @@ Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1,
 	hbox7->Add(cb_resetspeed, 1, wxEXPAND);
 	hbox7->Add(cb_noBT);
 	vbox->Add(hbox7, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, 5);
+
+	 vbox->Add(-1, 10);
 
 	wxBoxSizer *hbox8 = new wxBoxSizer(wxHORIZONTAL);
 	wxStaticText *t_addparams =  new wxStaticText(panel, wxID_ANY, wxT("Additional parameters:"));
