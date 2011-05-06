@@ -73,7 +73,14 @@ BEGIN_EVENT_TABLE(Ebook2cw, wxFrame)
 	EVT_TEXT(E2C_addparam, Ebook2cw::OnAddParamChange) 
 END_EVENT_TABLE()
 
-Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1, -1), wxSize(500, 500)) {
+Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1, -1), 
+#ifdef __WXMSW__
+		wxSize(450, 430)
+#else
+		wxSize(500, 500)
+#endif	
+) {
+
 
 	long tmp;
 
@@ -148,41 +155,50 @@ Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1,
 	wxStaticText *t_wpm =  new wxStaticText(panel, wxID_ANY, wxT("Speed (WpM):"));
 	h[wxT("w")].ToLong(&tmp);
 	wxSpinCtrl *spin_wpm = new wxSpinCtrl(panel, E2C_wpm, wxEmptyString, wxDefaultPosition,
-		       wxDefaultSize, wxSP_ARROW_KEYS, 5, 150, tmp);
+		       wxSize(50,21), wxSP_ARROW_KEYS, 5, 150, tmp);
 	
 	wxStaticText *t_wpme =  new wxStaticText(panel, wxID_ANY, wxT("eff. Speed (WpM):"));
 	h[wxT("e")].ToLong(&tmp);
 	wxSpinCtrl *spin_wpme = new wxSpinCtrl(panel, E2C_wpme, wxEmptyString, wxDefaultPosition,
-			                       wxDefaultSize, wxSP_ARROW_KEYS, 0, 150, tmp);
+		wxSize(50,21), wxSP_ARROW_KEYS, 0, 150, tmp);
 	
 	wxStaticText *t_ews =  new wxStaticText(panel, wxID_ANY, wxT("extra Word space:"));
 	h[wxT("W")].ToLong(&tmp);
 	wxSpinCtrl *spin_ews = new wxSpinCtrl(panel, E2C_ews, wxEmptyString, wxDefaultPosition,
-			                       wxDefaultSize, wxSP_ARROW_KEYS, 0, 10, tmp);
+			                       wxSize(50,21), wxSP_ARROW_KEYS, 0, 10, tmp);
 	
 	wxStaticText *t_qrq =  new wxStaticText(panel, wxID_ANY, wxT("QRQ (mins, 0 = off):"));
 	h[wxT("Q")].ToLong(&tmp);
 	wxSpinCtrl *spin_qrq = new wxSpinCtrl(panel, E2C_qrq, wxEmptyString, wxDefaultPosition,
-			                       wxDefaultSize, wxSP_ARROW_KEYS, 0, 60, tmp);
+			                       wxSize(50,21), wxSP_ARROW_KEYS, 0, 60, tmp);
 	
 	wxStaticText *t_tone =  new wxStaticText(panel, wxID_ANY, wxT("Tone (Hz):"));
 	h[wxT("f")].ToLong(&tmp);
 	wxSpinCtrl *spin_tone = new wxSpinCtrl(panel, E2C_tone, wxEmptyString, wxDefaultPosition,
-			                       wxDefaultSize, wxSP_ARROW_KEYS, 200, 1000, tmp);
+			                       wxSize(50,20), wxSP_ARROW_KEYS, 200, 1000, tmp);
 
 	wxStaticText *t_wave =  new wxStaticText(panel, wxID_ANY, wxT("Waveform:"));
 	wxString choices[3] = {wxT("Sine"), wxT("Sawtooth"), wxT("Square")};
 	wxChoice *choice_wave = new wxChoice(panel, E2C_wave, wxDefaultPosition, wxDefaultSize, 3, choices);
 
 	h[wxT("T")].ToLong(&tmp);
-	choice_wave->SetSelection(tmp-1);
+	if (tmp > 0 && tmp < 4) /* numerical */
+		choice_wave->SetSelection(tmp-1);
+	else {
+		if (h[wxT("T")] == wxT("SINE"))
+			choice_wave->SetSelection(0);
+		else if (h[wxT("T")] == wxT("SAWTOOTH"))
+			choice_wave->SetSelection(1);
+		else if (h[wxT("T")] == wxT("SQUARE"))
+			choice_wave->SetSelection(2);
+	}
 
 	flexgrid1->Add(t_wpm); flexgrid1->Add(spin_wpm);
 	flexgrid1->Add(t_wpme); flexgrid1->Add(spin_wpme);
 	flexgrid1->Add(t_ews); flexgrid1->Add(spin_ews);
 	flexgrid1->Add(t_qrq); flexgrid1->Add(spin_qrq);
 	flexgrid1->Add(t_tone); flexgrid1->Add(spin_tone);
-	flexgrid1->Add(t_wave); flexgrid1->Add(choice_wave);
+	flexgrid1->Add(t_wave); flexgrid1->Add(choice_wave,1,wxEXPAND);
 	flexgrid1->AddGrowableCol(0);
 
 	sbox1->Add(flexgrid1, 1, wxEXPAND);
@@ -216,6 +232,8 @@ Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1,
 	wxChoice *choice_format = new wxChoice(panel, E2C_fileformat, wxDefaultPosition, wxDefaultSize, 2, formats);
 	if (h.find(wxT("O")) != h.end())
 		choice_format->SetSelection(1);
+	else 
+		choice_format->SetSelection(0);
 
 	wxFlexGridSizer *flexgrid2 = new wxFlexGridSizer(2,0,0);
 
@@ -253,15 +271,19 @@ Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1,
 	 vbox->Add(-1, 25);
 
 	wxBoxSizer *hbox9 = new wxBoxSizer(wxHORIZONTAL);
-	wxHyperlinkCtrl *projectlink = new wxHyperlinkCtrl(panel, E2C_websitelink,
-		       wxT("ebook2cw-gui v0.1.0\nby Fabian Kurz, DJ1YFK"), wxT("http://fkurz.net/ham/ebook2cw.html"));	
+	wxBoxSizer *vbox2 = new wxBoxSizer(wxVERTICAL);
+	wxHyperlinkCtrl *projectlink = new wxHyperlinkCtrl(panel, E2C_websitelink, wxT("ebook2cwgui v0.1.0"), wxT("http://fkurz.net/ham/ebook2cw.html"));	
+	wxStaticText *projectlink2 = new wxStaticText(panel, E2C_websitelink, wxT("by Fabian Kurz, DJ1YFK"));	
+	vbox2->Add(projectlink);
+	vbox2->Add(projectlink2);
+
 	projectlink->Connect(wxEVT_ENTER_WINDOW, wxMouseEventHandler(Ebook2cw::OnWebsiteLinkHover),NULL,this); 
 
 	wxButton *btn_saveconf = new wxButton(panel, E2C_saveconf, wxT("Save conf."));
 	wxButton *btn_convert = new wxButton(panel, E2C_convert, wxT("Convert"));
 	wxButton *btn_exit = new wxButton(panel, E2C_quit, wxT("Quit"));
 
-	hbox9->Add(projectlink,1, wxEXPAND);
+	hbox9->Add(vbox2, 1, wxEXPAND);
 	hbox9->Add(btn_saveconf);
 	hbox9->Add(btn_convert);
 	hbox9->Add(btn_exit);
@@ -583,11 +605,11 @@ wxString Ebook2cw::FindConfigFile () {
 	dir = stdPaths.GetUserConfigDir();
 
 #ifdef __WXMSW__
-	if (!wxDirExists(dir + wxT("/ebook2cw"))) {
-		wxMkdir(dir + wxT("/ebook2cw"));
+	if (!wxDirExists(dir + wxT("\\ebook2cw"))) {
+		wxMkdir(dir + wxT("\\ebook2cw"));
 	}
 	/* if the file itself doesn't exist, it will be created later */
-	return dir + wxT("/ebook2cw/ebook2cw.conf");
+	return dir + wxT("\\ebook2cw\\ebook2cw.conf");
 #endif
 
 #ifdef __UNIX__
