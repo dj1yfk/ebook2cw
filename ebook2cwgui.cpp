@@ -281,7 +281,7 @@ Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1,
 
 	wxBoxSizer *hbox9 = new wxBoxSizer(wxHORIZONTAL);
 	wxBoxSizer *vbox2 = new wxBoxSizer(wxVERTICAL);
-	wxHyperlinkCtrl *projectlink = new wxHyperlinkCtrl(panel, E2C_websitelink, wxT("ebook2cwgui v0.1.0"), wxT("http://fkurz.net/ham/ebook2cw.html"));	
+	wxHyperlinkCtrl *projectlink = new wxHyperlinkCtrl(panel, E2C_websitelink, wxT("ebook2cw-gui v0.1.0"), wxT("http://fkurz.net/ham/ebook2cw.html"));	
 	wxStaticText *projectlink2 = new wxStaticText(panel, E2C_websitelink, wxT("by Fabian Kurz, DJ1YFK"));	
 	vbox2->Add(projectlink);
 	vbox2->Add(projectlink2);
