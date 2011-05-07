@@ -351,7 +351,7 @@ void Ebook2cw::OnChapterStringChange(wxCommandEvent & event) {
 }
 
 void Ebook2cw::Convert(wxCommandEvent & WXUNUSED(event)) {
-	wxString command = wxT("ebook2cw ");
+	wxString command;
 	wxString tmp;
 
 	/* sanity check: We need at least an input file and out dir */
@@ -396,11 +396,18 @@ void Ebook2cw::Convert(wxCommandEvent & WXUNUSED(event)) {
 	wxSetWorkingDirectory(OutDir);
 
 #ifdef __WXMSW__
-	if (wxFileExists(oldcwd + wxT("\\ebook2cw.exe")))
-		wxShell(oldcwd + wxT("\\") + command);
-	else
-		wxShell(command);	/* in PATH */
+	if (wxFileExists(oldcwd + wxT("\\ebook2cw.exe"))) {
+		command = wxT("\"") + oldcwd + wxT("\\ebook2cw.exe\" ") + 
+			command;
+//		wxMessageBox(command, wxT(":-)"), wxOK | wxICON_EXCLAMATION);
+		wxExecute(command);
+	}
+	else {
+		command = wxT("ebook2cw.exe ") + command;
+		wxExecute(command);	/* in PATH */
+	}
 #else
+	command = wxT("ebook2cw ") + command;
 	wxShell(command);	/* ebook2cw in PATH */
 #endif
 
