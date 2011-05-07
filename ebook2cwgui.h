@@ -66,5 +66,6 @@ class Ebook2cw : public wxFrame
 		void ReadConfigFile();
 		void SaveConfigFile(wxCommandEvent & event);
 		wxString FindConfigFile();
+		void FindExecutable();
 };
 

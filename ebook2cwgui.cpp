@@ -75,7 +75,7 @@ END_EVENT_TABLE()
 
 Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1, -1), 
 #ifdef __WXMSW__
-		wxSize(450, 430)
+		wxSize(455, 440)
 #else
 		wxSize(500, 500)
 #endif	
@@ -88,11 +88,11 @@ Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1,
 	int spinX = 50;
 	int spinY = 21;
 #else
-	int spinX= wxDefaultSize.x;
-	int spinY= wxDefaultSize.y;
+	int spinX = wxDefaultSize.x;
+	int spinY = wxDefaultSize.y;
 #endif	
 
-	//SetIcon(wxIcon(wxT("ebook2cw.xpm")));
+	SetIcon(wxIcon(wxT("ebook2cw.xpm")));
 	CreateStatusBar();
 	SetStatusText(wxT("Initializing ebook2cw-gui"));
 
@@ -108,7 +108,6 @@ Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1,
 	ReadConfigFile();
 
 	wxPanel *panel = new wxPanel(this, -1);
-	
 
 	wxBoxSizer *vbox = new wxBoxSizer(wxVERTICAL);
 
@@ -278,7 +277,7 @@ Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1,
 	hbox8->Add(tc_addparams, 2, wxEXPAND);
 	vbox->Add(hbox8, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, 5);
 
-	 vbox->Add(-1, 25);
+	 vbox->Add(-1, 15);
 
 	wxBoxSizer *hbox9 = new wxBoxSizer(wxHORIZONTAL);
 	wxBoxSizer *vbox2 = new wxBoxSizer(wxVERTICAL);
@@ -301,6 +300,8 @@ Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1,
 
 	panel->SetSizer(vbox);
 	Centre();
+
+	FindExecutable();
 }
 
 
@@ -311,7 +312,7 @@ void Ebook2cw::OnFileChange(wxFileDirPickerEvent& event) {
 
 	// Find out encoding by running ebook2cw -g
 	wxArrayString output, errors;
-	wxString cmd = wxT("ebook2cw -g") + event.GetPath();
+	wxString cmd = wxT("ebook2cw -g\"") + event.GetPath() + wxT("\"");
 
 	int code = wxExecute(cmd, output, errors);
 
@@ -395,7 +396,10 @@ void Ebook2cw::Convert(wxCommandEvent & WXUNUSED(event)) {
 	wxSetWorkingDirectory(OutDir);
 
 #ifdef __WXMSW__
-	wxShell(oldcwd + wxT("\\") + command);
+	if (wxFileExists(oldcwd + wxT("\\ebook2cw.exe")))
+		wxShell(oldcwd + wxT("\\") + command);
+	else
+		wxShell(command);	/* in PATH */
 #else
 	wxShell(command);	/* ebook2cw in PATH */
 #endif
@@ -526,7 +530,7 @@ void Ebook2cw::ReadConfigFile () {
 	}
 
 	file.Close();
-	SetStatusText(wxT("Finished reading ") + cfile);
+	SetStatusText(wxT("Read ") + cfile);
 
 }
 
@@ -591,7 +595,7 @@ void Ebook2cw::SaveConfigFile(wxCommandEvent & event) {
 
 	file.Write();
 	file.Close();
-	SetStatusText(wxT("Finished saving ebook2cw.conf"));
+	SetStatusText(wxT("Saved ")+ cfile);
 
 }
 
@@ -633,5 +637,13 @@ wxString Ebook2cw::FindConfigFile () {
 }
 
 
+void Ebook2cw::FindExecutable () {
+	long i;
+	wxArrayString foo;
+	i = wxExecute(wxT("ebook2cw -h"), foo, wxEXEC_SYNC);
+
+	if (i)
+		wxMessageBox(wxT("ebook2cw executable not found. Please make sure it is either in the same directory as ebook2cwgui, or somewhere in the executable PATH."), wxT("Warning"), wxOK | wxICON_EXCLAMATION);
+}
 
 
