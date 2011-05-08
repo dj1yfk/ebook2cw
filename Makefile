@@ -36,7 +36,7 @@ dist:
 	rm -rf releases/ebook2cwgui-$(VERSION)
 	mkdir ebook2cwgui-$(VERSION)
 	cp ebook2cwgui.cpp ebook2cwgui.h main.cpp main.h ChangeLog \
-		ebook2cwgui.1 README COPYING Makefile \
+		ebook2cwgui.1 README COPYING Makefile ebook2cw.xpm \
 		ebook2cwgui-$(VERSION)
 	tar -zcf ebook2cwgui-$(VERSION).tar.gz ebook2cwgui-$(VERSION)
 	mv ebook2cwgui-$(VERSION) releases/
