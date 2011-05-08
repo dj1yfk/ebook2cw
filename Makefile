@@ -17,10 +17,13 @@ win32:
 
 install:
 	install -d -v                      $(DESTDIR)/bin/
+	install -d -v                      $(DESTDIR)/share/man/man1/
 	install -s -m 0755 ebook2cwgui     $(DESTDIR)/bin/
+	install    -m 0644 ebook2cwgui.1   $(DESTDIR)/share/man/man1/
 	
 uninstall:
 	rm -f $(DESTDIR)/bin/ebook2cwgui
+	rm -f $(DESTDIR)/share/man/man1/ebook2cwgui.1
 
 clean:
 	rm -f ebook2cwgui ebook2cwgui.exe *~ *.mp3 *.ogg
