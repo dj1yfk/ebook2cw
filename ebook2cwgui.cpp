@@ -22,6 +22,7 @@ Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 
 #include "ebook2cwgui.h"
+#include "ebook2cw.xpm"
 
 enum {
 	E2C_infilepick = 1,
@@ -92,7 +93,7 @@ Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1,
 	int spinY = wxDefaultSize.y;
 #endif	
 
-	SetIcon(wxIcon(wxT("ebook2cw.xpm")));
+	SetIcon(wxIcon(ebook2cw_xpm));
 	CreateStatusBar();
 	SetStatusText(wxT("Initializing ebook2cw-gui"));
 

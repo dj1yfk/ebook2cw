@@ -1,5 +1,5 @@
 /* XPM */
-static char * ebook2cw_xpm[] = {
+const char * ebook2cw_xpm[] = {
 "32 32 89 1",
 " 	c None",
 ".	c #FFFFFF",
