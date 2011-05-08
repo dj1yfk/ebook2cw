@@ -512,7 +512,7 @@ void Ebook2cw::ReadConfigFile () {
 	}
 
 	wxTextFile file(cfile);
-	file.Open();
+	file.Open(wxConvISO8859_1);
 
 	(void) file.GetFirstLine();
 	while (!file.Eof()) {
