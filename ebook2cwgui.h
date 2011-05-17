@@ -28,6 +28,7 @@ Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <wx/hyperlink.h>
 #include <wx/textfile.h>
 #include <wx/stdpaths.h>
+#include "about.h"
 
 class Ebook2cw : public wxFrame
 {
@@ -67,5 +68,7 @@ class Ebook2cw : public wxFrame
 		void SaveConfigFile(wxCommandEvent & event);
 		wxString FindConfigFile();
 		void FindExecutable();
+		wxString IsPlaintext(wxString &s);
+		void ShowAbout(wxCommandEvent & event);
 };
 

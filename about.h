@@ -21,11 +21,13 @@ Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 
-
 #include <wx/wx.h>
+#include <wx/hyperlink.h>
 
-class MyApp : public wxApp {
+class About : public wxFrame
+{
 	public:
-		virtual bool OnInit();
+		About(const wxString& title);
+		DECLARE_EVENT_TABLE()
 };
 

@@ -44,6 +44,7 @@ enum {
 	E2C_noBT,
 	E2C_addparam,
 	E2C_saveconf,
+	E2C_about,
 	E2C_websitelink,
 	E2C_convert,
 	E2C_quit
@@ -54,6 +55,7 @@ BEGIN_EVENT_TABLE(Ebook2cw, wxFrame)
 	EVT_BUTTON(E2C_quit,  Ebook2cw::OnQuit)
 	EVT_BUTTON(E2C_convert,  Ebook2cw::Convert)
 	EVT_BUTTON(E2C_saveconf,  Ebook2cw::SaveConfigFile)
+	EVT_BUTTON(E2C_about,  Ebook2cw::ShowAbout)
 	EVT_FILEPICKER_CHANGED(E2C_infilepick, Ebook2cw::OnFileChange)
 	EVT_DIRPICKER_CHANGED(E2C_outdirpick, Ebook2cw::OnDirChange)
 	EVT_TEXT(E2C_chapterstring, Ebook2cw::OnChapterStringChange)
@@ -289,14 +291,16 @@ Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1,
 
 	projectlink->Connect(wxEVT_ENTER_WINDOW, wxMouseEventHandler(Ebook2cw::OnWebsiteLinkHover),NULL,this); 
 
+	wxButton *btn_about = new wxButton(panel, E2C_about, wxT("About"));
 	wxButton *btn_saveconf = new wxButton(panel, E2C_saveconf, wxT("Save conf."));
 	wxButton *btn_convert = new wxButton(panel, E2C_convert, wxT("Convert"));
 	wxButton *btn_exit = new wxButton(panel, E2C_quit, wxT("Quit"));
 
-	hbox9->Add(vbox2, 1, wxEXPAND);
-	hbox9->Add(btn_saveconf);
-	hbox9->Add(btn_convert);
-	hbox9->Add(btn_exit);
+	hbox9->Add(vbox2, 2, wxEXPAND);
+	hbox9->Add(btn_about,1);
+	hbox9->Add(btn_saveconf,1);
+	hbox9->Add(btn_convert,1);
+	hbox9->Add(btn_exit,1);
 	vbox->Add(hbox9, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, 5);
 
 	panel->SetSizer(vbox);
@@ -310,6 +314,12 @@ Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1,
 void Ebook2cw::OnFileChange(wxFileDirPickerEvent& event) {
 	
 	InFilename = event.GetPath();
+	
+	wxString ptf = IsPlaintext(InFilename);
+	
+	if (ptf != wxT("yes")) {
+		wxMessageBox(wxT("This looks like a ") + ptf + wxT(" file. You should convert it to plain text before translating it with ebook2cw."), wxT("Warning"), wxOK | wxICON_EXCLAMATION);
+	}
 
 	// Find out encoding by running ebook2cw -g
 	wxArrayString output, errors;
@@ -358,6 +368,11 @@ void Ebook2cw::Convert(wxCommandEvent & WXUNUSED(event)) {
 	/* sanity check: We need at least an input file and out dir */
 
 	if (!wxFileExists(InFilename)) {
+		wxMessageBox(wxT("Please select an input file!"), wxT("Error"), wxOK | wxICON_EXCLAMATION);
+		return;
+	}
+	
+	if (!(InFilename)) {
 		wxMessageBox(wxT("Please select an input file!"), wxT("Error"), wxOK | wxICON_EXCLAMATION);
 		return;
 	}
@@ -652,6 +667,46 @@ void Ebook2cw::FindExecutable () {
 
 	if (i)
 		wxMessageBox(wxT("ebook2cw executable not found. Please make sure it is either in the same directory as ebook2cwgui, or somewhere in the executable PATH."), wxT("Warning"), wxOK | wxICON_EXCLAMATION);
+}
+
+/* IsPlaintext: returns false if the file selected appears not to be a plain
+ * text file, e.g. a MS Word document */
+
+wxString Ebook2cw::IsPlaintext(wxString &s) {
+//	wxCharBuffer buffer=s.ToUTF8();
+	wxFile *f = new wxFile(s.c_str(), wxFile::read);
+	char buf[256];
+	char msoffice[5] = "\xd0\xcf\x11\xe0";
+
+	memset(buf, 0, 256);
+
+	if (!f->IsOpened()) {
+		return wxString(wxT("non existent"));	/* shud not happen! */
+	}
+
+	/* get first few bytes and test for common magic numbers */
+
+	if (f->Read(buf, 10) != 10) 
+		return wxString(wxT("yes")); /* so short? whatever... */
+
+	if (strncmp(buf, "\xd0\xcf\x11\xe0" , 4) == 0) 
+		return wxString(wxT("MS Office"));
+	if (strncmp(buf, "%PDF-" , 5) == 0) 
+		return wxString(wxT("PDF"));
+
+	f->Close();
+	
+	delete f;
+
+	return wxString(wxT("yes"));
+
+}
+
+
+void Ebook2cw::ShowAbout (wxCommandEvent & WXUNUSED(event)) {
+       About *abt = new About(wxT("About ebook2cw"));
+       abt->Show(true);
+       return;
 }
 
 

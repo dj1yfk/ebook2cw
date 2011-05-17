@@ -1,5 +1,5 @@
 /* 
-ebook2cwgui - A GUI for ebook2cw
+ebook2cwgui - a GUI for ebook2cw
 
 Copyright (C) 2011  Fabian Kurz, DJ1YFK
 
@@ -21,11 +21,35 @@ Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 
+#include "about.h"
 
-#include <wx/wx.h>
 
-class MyApp : public wxApp {
-	public:
-		virtual bool OnInit();
-};
+BEGIN_EVENT_TABLE(About, wxFrame)
+END_EVENT_TABLE()
+
+About::About(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1, -1), 
+#ifdef __WXMSW__
+		wxSize(455, 400)
+#else
+		wxSize(550, 400)
+#endif	
+) {
+
+//	SetIcon(wxIcon(ebook2cw_xpm));
+
+	wxPanel *panel = new wxPanel(this, -1);
+	wxBoxSizer *vbox = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer *hbox1 = new wxBoxSizer(wxHORIZONTAL);
+
+	wxStaticText *about = new wxStaticText(panel, wxID_ANY,
+				wxT("ebook2cw-gui v0.1.0 - FAPPPP\n\nWe are le fap."));
+	about->Wrap(500);
+	hbox1->Add(about);
+
+	vbox->Add(hbox1);
+
+	panel->SetSizer(vbox);
+	Centre();
+}
+
 

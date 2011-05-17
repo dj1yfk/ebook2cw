@@ -8,11 +8,11 @@ DESTDIR ?= /usr
 all: ebook2cwgui
 
 ebook2cwgui:
-	g++ ebook2cwgui.cpp main.cpp \
+	g++ ebook2cwgui.cpp about.cpp main.cpp \
 	       	-Wall `wx-config --libs --cxxflags` -o ebook2cwgui
 
 win32:
-	g++ -static ebook2cwgui.cpp main.cpp \
+	g++ -static ebook2cwgui.cpp about.cpp main.cpp \
 	       	-Wall `/wx/wx-config --libs --cxxflags` -o ebook2cwgui
 
 install:
