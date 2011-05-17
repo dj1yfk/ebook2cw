@@ -23,33 +23,50 @@ Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "about.h"
 
+enum {
+	ABOUT_close = 1
+};
+
 
 BEGIN_EVENT_TABLE(About, wxFrame)
+	EVT_BUTTON(ABOUT_close,  About::OnClose)
 END_EVENT_TABLE()
 
 About::About(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1, -1), 
 #ifdef __WXMSW__
 		wxSize(455, 400)
 #else
-		wxSize(550, 400)
+		wxSize(450, 200)
 #endif	
 ) {
 
-//	SetIcon(wxIcon(ebook2cw_xpm));
-
 	wxPanel *panel = new wxPanel(this, -1);
 	wxBoxSizer *vbox = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer *hbox1 = new wxBoxSizer(wxHORIZONTAL);
 
 	wxStaticText *about = new wxStaticText(panel, wxID_ANY,
-				wxT("ebook2cw-gui v0.1.0 - FAPPPP\n\nWe are le fap."));
-	about->Wrap(500);
-	hbox1->Add(about);
+	wxT("ebook2cw-gui v0.1.0 - (c) 2011 by Fabian Kurz, DJ1YFK\n\n"
+	"A Graphical User Interface (GUI) for ebook2cw\n\n"
+	"This is free software, and you are welcome to redistribute it\n"
+	"under certain conditions (see COPYING).\n\n"
+	"For help and documentation, please refer to the project website:"));
+	
+	wxHyperlinkCtrl *link = new wxHyperlinkCtrl(panel, wxID_ANY,
+       	wxT("http://fkurz.net/ham/ebook2cw.html"), wxT("http://fkurz.net/ham/ebook2cw.html"));
 
-	vbox->Add(hbox1);
+	wxButton *close = new wxButton(panel, ABOUT_close, wxT("Close"));
+
+	vbox->Add(about);
+	vbox->Add(link);
+
+	vbox->Add(-1, 10);
+
+	vbox->Add(close);
 
 	panel->SetSizer(vbox);
 	Centre();
 }
 
+void About::OnClose (wxCommandEvent & WXUNUSED(event)) {
+	this->Destroy();
+}
 

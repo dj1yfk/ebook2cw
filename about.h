@@ -29,5 +29,7 @@ class About : public wxFrame
 	public:
 		About(const wxString& title);
 		DECLARE_EVENT_TABLE()
+	private:
+		void OnClose (wxCommandEvent & event);
 };
 
