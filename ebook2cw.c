@@ -871,12 +871,17 @@ void command (char * cmd, CWP *cw) {
 				fprintf(stderr, "Invalid speed: %s. Ignored.\n", cmd);
 			break;
 		case 'T':
-			if (i > 0 && i < 3) {
+			if (i >= 0 && i < 3) {
 				cw->waveform = i;
 				init_cw(cw);
 			}
 			else 
 				fprintf(stderr, "Invalid waveform: %d. Ignored.\n", i);
+			break;
+		case 'v':
+				init_cw(cw);
+				scalebuffer(cw->dit_buf, cw->ditlen, (float) (i/100.0));
+				scalebuffer(cw->dah_buf, 3*cw->ditlen, (float) (i/100.0));
 			break;
 		case 'N':
 			cw->addnoise = 1;
@@ -1523,13 +1528,14 @@ void init_encoder (CWP *cw) {
 #ifdef LAME
 		gfp = lame_init();
 		lame_set_num_channels(gfp,1);
-		lame_set_in_samplerate(gfp, cw->samplerate);
 		lame_set_brate(gfp, cw->brate);
+		lame_set_in_samplerate(gfp, cw->samplerate);
+		lame_set_out_samplerate(gfp, cw->samplerate);
 		lame_set_mode(gfp,1);
 		lame_set_quality(gfp, cw->quality); 
-			
+
 		if (lame_init_params(gfp) < 0) {
-			fprintf(stderr, "Failed: lame_init_params(gfp) \n");
+			fprintf(stderr, "Failed: lame_init_params(gfp).\n\nPossible reason:\n * Bad sample rate, must be: 8k, 11.025k, 12k, 16k, 22.05k, 32k, 44.1k, 48k\n * Selected samplerate too high for selected bitrate.\n * You suck.\n");
 			exit(1);
 		}
 #endif
