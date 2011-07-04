@@ -123,6 +123,10 @@ typedef struct {
 	/* Chapter splitting */
 	char chapterstr[80], 		/* split chapters by this string */
 		 chapterfilename[80];
+	/* time based splitting */
+	int chaptertime;
+	/* word based splitting */
+	int	chapterwords;
 	/* encoding and mapping */
 	int encoding,				/* ISO8859 or UTF8 */
 		use_isomapping,
@@ -225,6 +229,9 @@ int main (int argc, char** argv) {
 	strcpy(cw.chapterstr, "CHAPTER");
 	strcpy(cw.chapterfilename, "Chapter");
 
+	cw.chaptertime = 0;
+	cw.chapterwords = 0;
+
 	cw.encoding = ISO8859;
 	cw.use_isomapping = cw.use_utf8mapping = 0;
 
@@ -248,7 +255,7 @@ int main (int argc, char** argv) {
 
 	readconfig(&cw);
 
-	while((i=getopt(argc,argv, "XOo:w:W:e:f:uc:k:Q:R:pF:s:b:q:a:t:y:S:hnT:N:B:C:g:"))!= -1){
+	while((i=getopt(argc,argv, "XOo:w:W:e:f:uc:k:Q:R:pF:s:b:q:a:t:y:S:hnT:N:B:C:g:d:l:"))!= -1){
 		setparameter(i, optarg, &cw);
 	} 
 
@@ -329,7 +336,14 @@ int main (int argc, char** argv) {
 		if ((c == ' ') || (c == '\n') || (pos == 1024)) {
 			word[pos] = '\0';
 #ifndef CGI
-			if (strcmp(cw.chapterstr, word) == 0) {	/* new chapter */
+			/* new chapter if ... */
+			if ((strcmp(cw.chapterstr, word) == 0)
+			   	||
+				(cw.chaptertime && chms/1000 >= cw.chaptertime) 
+				||			   
+				(cw.chapterwords && chw == cw.chapterwords) 
+			   )
+				{
 				closefile(chapter, chw, chms, &cw);
 				tw += chw;
 				tms += chms;
@@ -1042,6 +1056,12 @@ void setparameter (char i, char *value, CWP *cw) {
 				break;
 			case 'q':
 				cw->quality = atoi(value);
+				break;
+			case 'd':	/* chapter duration in minutes (optional!) */
+				cw->chaptertime = atoi(value);
+				break;
+			case 'l':	/* chapter length in words (optional!) */
+				cw->chapterwords = atoi(value);
 				break;
 			case 'c':
 				strncpy(cw->chapterstr, value, 78);
