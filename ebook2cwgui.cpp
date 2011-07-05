@@ -40,6 +40,10 @@ enum {
 	E2C_comment,
 	E2C_year,
 	E2C_fileformat,
+	E2C_limitwordscb,
+	E2C_limitwordsspin,
+	E2C_limitsecondscb,
+	E2C_limitsecondsspin,
 	E2C_resetqrq,
 	E2C_noBT,
 	E2C_addparam,
@@ -80,7 +84,7 @@ Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1,
 #ifdef __WXMSW__
 		wxSize(455, 440)
 #else
-		wxSize(500, 500)
+		wxSize(500, 550)
 #endif	
 ) {
 
@@ -259,6 +263,21 @@ Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1,
 	hbox6->Add(sbox2, 1);
 
 	vbox->Add(hbox6, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, 5);
+	
+	wxCheckBox *cb_limitwords = new wxCheckBox(panel, E2C_limitwordscb, wxT("Limit words per chapter to: "));
+	wxSpinCtrl *spin_limitwords = new wxSpinCtrl(panel, E2C_limitwordsspin, wxEmptyString, wxDefaultPosition,
+			                       wxSize(spinX,spinY), wxSP_ARROW_KEYS, 5, 10000);
+	wxCheckBox *cb_limitseconds = new wxCheckBox(panel, E2C_limitsecondscb, wxT("Limit chapter duration to (sec): "));
+	wxSpinCtrl *spin_limitseconds = new wxSpinCtrl(panel, E2C_limitsecondsspin, wxEmptyString, wxDefaultPosition,
+			                       wxSize(spinX,spinY), wxSP_ARROW_KEYS, 5, 10000);
+
+
+	wxFlexGridSizer *flexgrid3 = new wxFlexGridSizer(2,0,0);
+	flexgrid3->Add(cb_limitwords); flexgrid3->Add(spin_limitwords, 1, wxEXPAND);
+	flexgrid3->Add(cb_limitseconds); flexgrid3->Add(spin_limitseconds, 1, wxEXPAND);
+	
+	vbox->Add(flexgrid3, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, 5);
+	
 	
 	wxBoxSizer *hbox7 = new wxBoxSizer(wxHORIZONTAL);
 	wxCheckBox *cb_resetspeed = new wxCheckBox(panel, E2C_resetqrq, wxT("Reset speed for each chapter"));
