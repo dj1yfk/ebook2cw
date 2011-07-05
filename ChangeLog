@@ -6,6 +6,8 @@
 	* New text command |v for volume control
 	* Chapter splitting now possible by duration (-d seconds)
 	  and number of words (-l words) (suggested by DM3KPO)
+	* Fix inconsistent numbers for waveforms (0 = sine, 1 = sawtooth,
+	  2 = square)
 
 0.8.1 / 2011-04-04   Fabian Kurz   <mail@fkurz.net>
 	* Guessing of file encoding added (-g filename).
