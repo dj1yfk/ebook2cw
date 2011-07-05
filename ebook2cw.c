@@ -778,7 +778,7 @@ void help (void) {
 	printf("         [-a author] [-t title] [-k comment] [-y year]\n");
 	printf("         [-u] [-S ISO|UTF] [-n] [-e eff.wpm] [-W space]\n");
 	printf("         [-N snr] [-B filter bandwidth] [-C filter center]\n");
-	printf("         [-T 1..3] [-g filename]\n");
+	printf("         [-T 0..2] [-g filename] [-l words] [-d seconds]\n");
 	printf("         [infile]\n\n");
 	printf("defaults: 25 WpM, 600Hz, RT=FT=50, s=11025Hz, b=16kbps,\n");
 	printf("          c=\"CHAPTER\", o=\"Chapter\" infile = stdin\n");
@@ -1157,13 +1157,13 @@ void setparameter (char i, char *value, CWP *cw) {
 				help();
 				break;
 			case 'T':
-				if (strstr(value, "SINE") || atoi(value) == 1) {
+				if (strstr(value, "SINE") || atoi(value) == 0) {
 					cw->waveform = SINE;
 				}
-				else if (strstr(value, "SAWTOOTH") || atoi(value) == 2) {
+				else if (strstr(value, "SAWTOOTH") || atoi(value) == 1) {
 					cw->waveform = SAWTOOTH;
 				}
-				else if (strstr(value, "SQUARE") || atoi(value) == 3) {
+				else if (strstr(value, "SQUARE") || atoi(value) == 2) {
 					cw->waveform = SQUARE;	
 				}
 				break;
