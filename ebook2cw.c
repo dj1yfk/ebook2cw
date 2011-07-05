@@ -187,6 +187,7 @@ int main (int argc, char** argv) {
 	int chw = 0, tw = 0, qw = 0;	/* chapter words, total words, qrq words */
 	int chms = 0, tms = 0, qms = 0; /* millisec: chapter, total, since qrq */
 	time_t start_time, end_time;	/* conversion time */
+	int finishchapter = 0;			/* finish chapter after this sentence */
 	FILE *infile;
 
 #ifdef CGI
@@ -282,7 +283,17 @@ int main (int argc, char** argv) {
 
 	printf("Effective speed: %dwpm, ", cw.farnsworth ? cw.farnsworth : cw.wpm);
 	printf("Extra word spaces: %1.1f, ", cw.ews);
-	printf("QRQ: %dmin, reset QRQ: %s\n\n", cw.qrq, cw.reset ? "yes" : "no");
+	printf("QRQ: %dmin, reset QRQ: %s\n", cw.qrq, cw.reset ? "yes" : "no");
+
+	if (cw.chapterwords) {
+		printf("Chapter limit: %d words, ", cw.chapterwords);
+	}
+	if (cw.chaptertime) {
+		printf("Chapter limit: %d seconds, ", cw.chaptertime);
+	}
+
+	printf("Encoder: %s\n\n", (cw.encoder == OGG) ? "OGG" : "MP3");
+
 #endif
 
 
@@ -332,18 +343,16 @@ int main (int argc, char** argv) {
 				continue;
 
 		word[pos++] = c;
+
 		
 		if ((c == ' ') || (c == '\n') || (pos == 1024)) {
 			word[pos] = '\0';
 #ifndef CGI
-			/* new chapter if ... */
-			if ((strcmp(cw.chapterstr, word) == 0)
-			   	||
-				(cw.chaptertime && chms/1000 >= cw.chaptertime) 
-				||			   
-				(cw.chapterwords && chw == cw.chapterwords) 
-			   )
-				{
+			/* new chapter */
+			if ((strcmp(cw.chapterstr, word) == 0) ||	/* regular */
+					finishchapter == 2
+			   ) {
+
 				closefile(chapter, chw, chms, &cw);
 				tw += chw;
 				tms += chms;
@@ -356,6 +365,8 @@ int main (int argc, char** argv) {
 					init_cw(&cw);
 					qw = 0;
 				}
+
+				finishchapter = 0;
 					
 				openfile(chapter, &cw);
 			}
@@ -372,9 +383,6 @@ int main (int argc, char** argv) {
 				chw++; 
 			}
 
-			word[0] = '\0';
-			pos = 0;
-
 			/* Every 'cw.qrq' minutes speed up 1 WpM */
 			if (cw.qrq && ((qms/60000.0) > cw.qrq)) {
 				cw.wpm += 1;
@@ -382,6 +390,25 @@ int main (int argc, char** argv) {
 				printf("QRQ: %dwpm\n", cw.wpm);
 				qms = 0;
 			}
+	
+			/* word finished; reached word- or time-limit? */
+			if (finishchapter || (cw.chaptertime && chms/1000 >= cw.chaptertime) ||
+				(cw.chapterwords && chw == cw.chapterwords)) {
+					/* Yes! Finish sentence (i.e. until next '.', '!' or '?')
+					 * and then start a new chapter */
+					finishchapter = 1;
+
+					/* End of sentence? */
+					if (word[pos-2] == '.' || 
+						 word[pos-2] == '!' ||
+						 word[pos-2] == '?') {
+						finishchapter = 2;
+					}
+			}
+			
+			word[0] = '\0';
+			pos = 0;
+
 
 		} /* word */
 
