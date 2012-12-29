@@ -1,7 +1,7 @@
 /* 
 ebook2cw - converts an ebook to morse mp3s
 
-Copyright (C) 2007 - 2011  Fabian Kurz, DJ1YFK
+Copyright (C) 2007 - 2012  Fabian Kurz, DJ1YFK
 
 $Id$
 
@@ -144,6 +144,7 @@ typedef struct {
 		id3_year[5];
 
 	FILE *outfile;
+	unsigned int outfile_length;
 } CWP;
 
 
@@ -193,6 +194,11 @@ int main (int argc, char** argv) {
 #ifdef CGI
 	char * querystring;
 	static char text[10000];
+	static char outfilename[1024];
+#endif
+
+#ifdef CGIBUFFERED
+	char *cgibuf;
 #endif
 
 	/* initializing the CW parameter struct with standard values */
@@ -244,9 +250,12 @@ int main (int argc, char** argv) {
 	strcpy(cw.id3_year, "");
 
 	infile = stdin;
+	cw.outfile_length = 0;
+	
+	start_time = time(NULL);
+	srand((unsigned int) start_time);
 
 #ifndef CGI
-	start_time = time(NULL);
 
 	printf("ebook2cw %s - (c) 2011 by Fabian Kurz, DJ1YFK\n\n", VERSION);
 
@@ -298,15 +307,40 @@ int main (int argc, char** argv) {
 
 
 #ifdef CGI
+/* CGI standard: write directly to stdout ==> no Content-Length possible
+ * CGI buffered: write to file /tmp/$time-$rnd and later generate output */
+#ifndef CGIBUFFERED				
 	cw.outfile = stdout;
+#else
+	/* we need to generate a good random number for the file name;
+	 * just using rand(time) won't do if two requests come in the
+	 * same second. temporarily use cw.outfile FD to open urand */
+	if ((cw.outfile = fopen("/dev/urandom", "r")) == NULL) {
+	        fprintf(stderr, "Error: Failed to open /dev/urandom.\n");
+	        exit(EXIT_FAILURE);
+	}
+	fread(&i, sizeof(i), 1, cw.outfile);
+	srand(i);
+	i = rand();
+	fclose(cw.outfile);
+
+	snprintf(outfilename, 80, "/tmp/%d-%d", start_time, i);
+	if ((cw.outfile = fopen(outfilename, "wb+")) == NULL) {
+	        fprintf(stderr, "Error: Failed to open %s\n", outfilename);
+	        exit(EXIT_FAILURE);
+	}
+#endif
 	switch (cw.encoder) {
 		case MP3:
-			printf("Content-type: audio/mpeg\n\n");
+			printf("Content-Type: audio/mpeg\n");
 			break;
 		case OGG:
-			printf("Content-type: audio/ogg\n\n");
+			printf("Content-Type: audio/ogg\n");
 			break;
 	}
+#ifndef CGIBUFFERED	/* header is finished */
+	printf("\n");
+#endif
 	querystring = getenv("QUERY_STRING");
 	if ((querystring == NULL) || strlen(querystring) > 9000) {
 			exit(1);
@@ -413,6 +447,19 @@ int main (int argc, char** argv) {
 		} /* word */
 
 	} /* eof */
+
+
+/* CGI: Add some silence (500ms) to the end of the file */
+#ifdef CGI
+	/* 500ms in samples */
+	i = 0.5*cw.samplerate;
+	for (pos = 0; pos < i; pos++) {
+		cw.inpcm[pos] = 0; 
+	}
+	encode_buffer(i, &cw);	
+#endif
+
+
 #ifndef CGI
 	closefile(chapter, chw, chms, &cw);
 	end_time = time(NULL);
@@ -421,8 +468,8 @@ int main (int argc, char** argv) {
 			timestring(1000.0 * difftime(end_time, start_time)), 
 			((tms+chms)/(1000.0 * difftime(end_time,start_time)))
 	);
-#else
-	if (cw.encoder == OGG) {
+#else	/* in CGI mode, we need to do this to close the file properly */
+	if (cw.encoder == OGG) {   /* (otherwise done in closefile() */
 #ifdef OGGV
 		vorbis_analysis_wrote(&vd,0);
 		ogg_encode_and_write(&cw);
@@ -448,6 +495,18 @@ int main (int argc, char** argv) {
 	free(cw.mp3buffer);
 	free(cw.inpcm);
 	free(cw.noisebuf);
+
+#ifdef CGIBUFFERED
+	printf("Content-Length: %d\n", cw.outfile_length);
+	printf("\n");
+	i = (int) ftell(cw.outfile);
+	rewind(cw.outfile);
+	cgibuf = malloc((size_t) i+1);
+	fread(cgibuf, sizeof(char), (size_t) i, cw.outfile);
+	fclose(cw.outfile);
+	fwrite(cgibuf, sizeof(char), (size_t) i, stdout);
+	unlink(outfilename);
+#endif
 
 	return (EXIT_SUCCESS);
 }
@@ -690,6 +749,7 @@ void closefile (int chapter, int chw, int chms, CWP *cw) {
 						outbytes);
 				exit(EXIT_FAILURE);
 			}
+			cw->outfile_length += outbytes;
 #endif
 			break;
 		case OGG:
@@ -757,6 +817,8 @@ void openfile (int chapter, CWP *cw) {
 			while (ogg_stream_flush(&os,&og)) {
 				fwrite(og.header,1,og.header_len,cw->outfile);
 				fwrite(og.body,1,og.body_len,cw->outfile);
+				cw->outfile_length += og.header_len;
+				cw->outfile_length += og.body_len;
 			}
 #endif
 			break;
@@ -1582,7 +1644,7 @@ void init_encoder (CWP *cw) {
 		lame_set_quality(gfp, cw->quality); 
 
 		if (lame_init_params(gfp) < 0) {
-			fprintf(stderr, "Failed: lame_init_params(gfp).\n\nPossible reason:\n * Bad sample rate, must be: 8k, 11.025k, 12k, 16k, 22.05k, 32k, 44.1k, 48k\n * Selected samplerate too high for selected bitrate.\n * You suck.\n");
+			fprintf(stderr, "Failed: lame_init_params(gfp).\n\nPossible reason:\n * Bad sample rate, must be: 8k, 11.025k, 12k, 16k, 22.05k, 32k, 44.1k, 48k\n * Selected samplerate too high for selected bitrate.\n");
 			exit(1);
 		}
 #endif
@@ -1590,12 +1652,21 @@ void init_encoder (CWP *cw) {
 	else {	/* OGG */
 #ifdef OGGV
 		vorbis_info_init(&vi);
-		
+	
+/* we use fixed BR for CGI because we need always files above 4kB
+ * to get around Firefox's strange behaviour with shorter files,
+ * therefore we create large files on purpose :-| */
+#ifdef CGI
+		if (vorbis_encode_init(&vi,1,cw->samplerate,32000,32000,32000)) {
+			fprintf(stderr, "Failed: vorbis_encode_init_vbr()\n");
+			exit(1);
+		}
+#else
 		if (vorbis_encode_init_vbr(&vi,1,cw->samplerate,0.7)) {
 			fprintf(stderr, "Failed: vorbis_encode_init_vbr()\n");
 			exit(1);
 		}
-
+#endif
 		vorbis_comment_init(&vc);
 		vorbis_comment_add_tag(&vc,"ENCODER","ebook2cw");
 		vorbis_analysis_init(&vd, &vi);
@@ -1626,7 +1697,8 @@ void ogg_encode_and_write (CWP *cw) {
 					if (result == 0) break;
 					fwrite(og.header,1,og.header_len, cw->outfile);
 					fwrite(og.body,1,og.body_len, cw->outfile);
-/*					if(ogg_page_eos(&og)) eos = 1;*/
+					cw->outfile_length += og.header_len;
+					cw->outfile_length += og.body_len;
 				}
 			}
 	}	
@@ -1660,6 +1732,7 @@ void encode_buffer (int length, CWP *cw) {
 						outbytes);
 				exit(EXIT_FAILURE);
 			}
+			cw->outfile_length += outbytes;
 #endif
 			break;
 		case OGG:

@@ -1,4 +1,4 @@
-0.8.2 / 2011-  -     Fabian Kurz   <mail@fkurz.net>
+0.8.2 / 2013-01-01   Fabian Kurz   <fabian@fkurz.net>
 	* Time of conversion and speedup calculations
 	* Fixed text command |T0
 	* Samplerate of output file now always according to -s parameter (no
@@ -8,6 +8,9 @@
 	  and number of words (-l words) (suggested by DM3KPO)
 	* Fix inconsistent numbers for waveforms (0 = sine, 1 = sawtooth,
 	  2 = square)
+	* New CGI mode (make cgibuffered) where the while file is
+	  first created temporarily and then sent to the client.
+	  This makes it possible to send the Content-Length header.
 
 0.8.1 / 2011-04-04   Fabian Kurz   <mail@fkurz.net>
 	* Guessing of file encoding added (-g filename).

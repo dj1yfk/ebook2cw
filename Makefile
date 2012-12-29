@@ -29,6 +29,9 @@ ebook2cw: ebook2cw.c codetables.h
 cgi: ebook2cw.c codetables.h
 	gcc -static ebook2cw.c $(LDFLAGS) -lm $(CFLAGS) -D CGI -o cw.cgi
 
+cgibuffered: ebook2cw.c codetables.h
+	gcc -static ebook2cw.c $(LDFLAGS) -lm $(CFLAGS) -D CGI -D CGIBUFFERED -o cw.cgi
+
 static:
 	gcc -static ebook2cw.c $(LDFLAGS) -lm $(CFLAGS) -o ebook2cw
 
