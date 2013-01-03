@@ -123,7 +123,7 @@ typedef struct {
 	/* Chapter splitting */
 	char chapterstr[80], 		/* split chapters by this string */
 		 chapterfilename[80];
-	/* time based splitting */
+	/* time based splitting, seconds */
 	int chaptertime;
 	/* word based splitting */
 	int	chapterwords;
@@ -153,6 +153,7 @@ void  init_cw (CWP *cw);
 void  init_encoder (CWP *cw);
 void  encode_buffer (int length, CWP *cw);
 void  ogg_encode_and_write (CWP *cw);
+void  flush_ogg (CWP *cw);
 void  help (void);
 void  showcodes (int i);
 int   makeword(char * text, CWP *cw);
@@ -162,6 +163,7 @@ void  buf_alloc (CWP *cw);
 void  buf_check (int j, CWP *cw);
 void  command (char * cmd, CWP *cw);
 void  readconfig (CWP *cw);
+int   install_config_files (char *homedir, CWP *cw);
 void  setparameter (char p, char * value, CWP *cw);
 void  loadmapping(char *filename, int enc, CWP *cw);
 char  *mapstring (char *string, CWP *cw);
@@ -173,6 +175,7 @@ void  scalebuffer(short int *buf, int length, float factor);
 void  addbuffer (short int *b1, short int *b2, int l);
 char  *timestring (int ms);
 void  guessencoding (char *filename);
+void add_silence (int ms, CWP *cw);
 
 #ifdef CGI
 int   hexit (char c);
@@ -257,7 +260,7 @@ int main (int argc, char** argv) {
 
 #ifndef CGI
 
-	printf("ebook2cw %s - (c) 2011 by Fabian Kurz, DJ1YFK\n\n", VERSION);
+	printf("ebook2cw %s - (c) 2013 by Fabian Kurz, DJ1YFK\n\n", VERSION);
 
 	/* 
 	 * Find and read ebook2cw.conf 
@@ -348,15 +351,13 @@ int main (int argc, char** argv) {
 	sscanf(querystring, "s=%d&e=%d&f=%d&t=%9000s", &cw.wpm, &cw.farnsworth, &cw.freq, text);
 	strcat(text, " ");
 	urldecode(text);
+
+	flush_ogg(&cw);
 #endif
 
 	init_cw(&cw);	/* generate raw dit, dah */
 
 	strcat(cw.chapterstr, " ");
-
-	/* read STDIN, assemble full words (anything ending in ' ') to 'word' and
-	 * generate CW, write to file by 'makeword'. words with > 1024 characters
-	 * will be split  */
 
 	cw.original_wpm = cw.wpm;					/* may be changed by QRQing */
 	chapter = 0;
@@ -366,6 +367,15 @@ int main (int argc, char** argv) {
 
 	i=0;
 	pos=0;
+
+	/* 100ms of silence at the start; some decoders otherwise produce
+	 * crackling noises */
+	add_silence(100, &cw);
+	
+	
+	/* read input, assemble full words (anything ending in ' ') to 'word' and
+	 * generate CW, write to file by 'makeword'. words with > 1024 characters
+	 * will be split  */
 
 #ifndef CGI
 	while ((c = getc(infile)) != EOF) {
@@ -451,13 +461,9 @@ int main (int argc, char** argv) {
 
 /* CGI: Add some silence (500ms) to the end of the file */
 #ifdef CGI
-	/* 500ms in samples */
-	i = 0.5*cw.samplerate;
-	for (pos = 0; pos < i; pos++) {
-		cw.inpcm[pos] = 0; 
-	}
-	encode_buffer(i, &cw);	
+	add_silence(500, &cw);
 #endif
+
 
 
 #ifndef CGI
@@ -497,14 +503,24 @@ int main (int argc, char** argv) {
 	free(cw.noisebuf);
 
 #ifdef CGIBUFFERED
+	/* File is completed, so we know the length and can send the 
+	 * content length header, and then the whole file */
 	printf("Content-Length: %d\n", cw.outfile_length);
 	printf("\n");
 	i = (int) ftell(cw.outfile);
 	rewind(cw.outfile);
+	/* maybe one day sendfile(2) will support writing to a
+	 * file descriptor, not just a socket, to make this 
+	 * easier and faster... */
 	cgibuf = malloc((size_t) i+1);
+	if (cgibuf == NULL) {
+		fprintf(stderr, "malloc() for cgibuf failed!\n");
+		exit(EXIT_FAILURE);
+	}
 	fread(cgibuf, sizeof(char), (size_t) i, cw.outfile);
 	fclose(cw.outfile);
 	fwrite(cgibuf, sizeof(char), (size_t) i, stdout);
+
 	unlink(outfilename);
 #endif
 
@@ -662,12 +678,14 @@ int makeword(char * text, CWP *cw) {
 
 	/* Not found anything, produce warning message */
 	if (code == NULL) {
+#ifndef CGI
 		if (c < 255) {
 			fprintf(stderr, "Warning: don't know CW for '%c'\n", c);
 		}
 		else {
 			fprintf(stderr, "Warning: don't know CW for unicode &#%d;\n", c);
 		}
+#endif
 		code = " ";
 
 	}
@@ -814,12 +832,7 @@ void openfile (int chapter, CWP *cw) {
 			ogg_stream_packetin(&os,&hdr); 
 			ogg_stream_packetin(&os,&hdr_comm);
 			ogg_stream_packetin(&os,&hdr_code);
-			while (ogg_stream_flush(&os,&og)) {
-				fwrite(og.header,1,og.header_len,cw->outfile);
-				fwrite(og.body,1,og.body_len,cw->outfile);
-				cw->outfile_length += og.header_len;
-				cw->outfile_length += og.body_len;
-			}
+			flush_ogg(cw);
 #endif
 			break;
 		case NOENC:
@@ -1014,7 +1027,11 @@ void readconfig (CWP *cw) {
 	char v[80]="";			/* value */
 	static char mapfile[1024]="";
 	char *homedir = NULL;
-	int j=0;
+
+	/* Part 1:
+	 * Find config file; if not found try to copy/install it to 
+	 * ~/.ebook2cw
+	 */
 
 	if ((conf = fopen(cw->configfile, "r")) == NULL) {
 		/* ebook2cw.conf not in current directory */
@@ -1032,45 +1049,9 @@ void readconfig (CWP *cw) {
 				/* cannot find ebook2cw.conf anywhere. silently return */
 				return;
 			}
-			else {
-				printf("First run. Copying example configuration files to "
-					"%s/.ebook2cw/\n\n", homedir);
-				snprintf(tmp, 1024, "%s/.ebook2cw/", homedir);
-				j = mkdir(tmp, 0777);
-				if (j && (errno != EEXIST)) {
-					printf("Failed to create %s. Resuming without config.",tmp);
-					return;
-				}
-				/* ~/.ebook2cw/ created. Now copy ebook2cw.conf and map files */
-				snprintf(tmp, 1024, "install -m 644 "DESTDIR
-					"/share/doc/ebook2cw/examples/ebook2cw.conf %s/.ebook2cw/",
-					homedir);
-				if (system(tmp)) {
-					printf("Failed to create ~/.ebook2cw/ebook2cw.conf. "
-									"Resuming without config.");
-					return;
-				}
-
-				snprintf(tmp, 1024, "install -m 644 "DESTDIR
-					"/share/doc/ebook2cw/examples/isomap.txt %s/.ebook2cw/",
-					homedir);
-				if (system(tmp)) {
-					printf("Failed to create ~/.ebook2cw/isomap.txt. "
-									"Resuming without config.");
-					return;
-				}
-
-				snprintf(tmp, 1024, "install -m 644 "DESTDIR
-					"/share/doc/ebook2cw/examples/utf8map.txt %s/.ebook2cw/",
-					homedir);
-				if (system(tmp)) {
-					printf("Failed to create ~/.ebook2cw/utf8map.txt. "
-									"Resuming without config.");
-					return;
-				}
-
-				/* Succcess. files installed to ~/.ebook2cw/ */
-
+			/* First run, we install/copy the defaults to ~/.ebook2cw */
+			else if (install_config_files(homedir, cw) == 0) {
+				/* Files installed to ~/.ebook2cw/ */
 				snprintf(cw->configfile, 1024, "%s/.ebook2cw/ebook2cw.conf",
 								homedir);
 
@@ -1080,11 +1061,19 @@ void readconfig (CWP *cw) {
 									cw->configfile);
 					return;
 				}
-
+			}
+			else {
+				/* installing didn't work for some reason, silently
+				 * return */
+				return;
 			}
 		}
 #endif
 	}
+
+	/* Part 2:
+	 * Read config file
+	 */
 
 	printf("Reading configuration file: %s\n\n", cw->configfile);
 
@@ -1105,7 +1094,6 @@ void readconfig (CWP *cw) {
 	}
 
 	/* mappings */
-
 
 	while ((feof(conf) == 0) && (fgets(tmp, 80, conf) != NULL)) {
 		tmp[strlen(tmp)-1]='\0';
@@ -1146,7 +1134,7 @@ void setparameter (char i, char *value, CWP *cw) {
 			case 'q':
 				cw->quality = atoi(value);
 				break;
-			case 'd':	/* chapter duration in minutes (optional!) */
+			case 'd':	/* chapter duration in seconds (optional!) */
 				cw->chaptertime = atoi(value);
 				break;
 			case 'l':	/* chapter length in words (optional!) */
@@ -1256,8 +1244,7 @@ void setparameter (char i, char *value, CWP *cw) {
  * index:     utf8mapindex, isomapindex
  * mappings:  utf8map, isomap
  *
- * */
-
+ */
 
 void loadmapping(char *file, int enc, CWP *cw) {
 	FILE *mp;
@@ -1653,20 +1640,11 @@ void init_encoder (CWP *cw) {
 #ifdef OGGV
 		vorbis_info_init(&vi);
 	
-/* we use fixed BR for CGI because we need always files above 4kB
- * to get around Firefox's strange behaviour with shorter files,
- * therefore we create large files on purpose :-| */
-#ifdef CGI
-		if (vorbis_encode_init(&vi,1,cw->samplerate,32000,32000,32000)) {
-			fprintf(stderr, "Failed: vorbis_encode_init_vbr()\n");
-			exit(1);
-		}
-#else
 		if (vorbis_encode_init_vbr(&vi,1,cw->samplerate,0.7)) {
 			fprintf(stderr, "Failed: vorbis_encode_init_vbr()\n");
 			exit(1);
 		}
-#endif
+
 		vorbis_comment_init(&vc);
 		vorbis_comment_add_tag(&vc,"ENCODER","ebook2cw");
 		vorbis_analysis_init(&vd, &vi);
@@ -1705,6 +1683,8 @@ void ogg_encode_and_write (CWP *cw) {
 #endif
 }
 
+/* current content of the cw.inpcm buffer is encoded and written
+ * to the cw.outfile */
 
 void encode_buffer (int length, CWP *cw) {
 #ifdef LAME
@@ -1751,6 +1731,9 @@ void encode_buffer (int length, CWP *cw) {
 	} /* switch */
 
 }
+
+/* pretty print of a input value (milliseconds) as a string in the
+ * form: hh:mm:ss or mm:ss or ss, depending on the length */
 
 char *timestring (int ms) {
 	int h = 0, m = 0, s = 0;
@@ -1813,6 +1796,88 @@ void guessencoding (char *filename) {
 	printf("%s\n\n", (is_iso ? "ISO 8859-1" : "UTF-8")); 
 
 	exit(EXIT_SUCCESS);
+}
+
+/* Flush OGG stream. Originally this was in the openfile()
+ * function but since openfile() is not called in CGI mode, 
+ * but this flushing is necessary, it needed
+ * to be put in a separate function.
+ */ 
+
+void flush_ogg (CWP *cw) {
+		while (ogg_stream_flush(&os,&og)) {
+			fwrite(og.header,1,og.header_len,cw->outfile);
+			fwrite(og.body,1,og.body_len,cw->outfile);
+			cw->outfile_length += og.header_len;
+			cw->outfile_length += og.body_len;
+		}
+}
+
+/* 
+ * Add ms milliseconds of silence to the current file
+ */
+
+void add_silence (int ms, CWP *cw) {
+	int i, pos;
+    i = ms*cw->samplerate/1000.0;
+	for (pos = 0; pos < i; pos++) {
+		cw->inpcm[pos] = 0; 
+	}
+	encode_buffer(i, cw);	
+}
+
+/* readconfig calls this if 
+ * no config files were found in ~/.ebook2cw 
+ * but in DESTDIT/share/doc/ebook2cw.
+ * They will then be compied to ~/.ebook2cw
+ *
+ * Return: Success        NULL
+ *         Some failure   -1
+ *
+ * Moved from readfile to a separate function.
+ */
+
+int install_config_files (char *homedir, CWP *cw) {
+	int j = 0;
+	char tmp[1024] = "";
+	
+	printf("First run. Copying example configuration files to "
+		"%s/.ebook2cw/\n\n", homedir);
+	snprintf(tmp, 1024, "%s/.ebook2cw/", homedir);
+	j = mkdir(tmp, 0777);
+	if (j && (errno != EEXIST)) {
+		printf("Failed to create %s. Resuming without config.",tmp);
+		return -1;
+	}
+	/* ~/.ebook2cw/ created. Now copy ebook2cw.conf and map files */
+	snprintf(tmp, 1024, "install -m 644 "DESTDIR
+		"/share/doc/ebook2cw/examples/ebook2cw.conf %s/.ebook2cw/",
+		homedir);
+	if (system(tmp)) {
+		printf("Failed to create ~/.ebook2cw/ebook2cw.conf. "
+						"Resuming without config.");
+		return -1;
+	}
+
+	snprintf(tmp, 1024, "install -m 644 "DESTDIR
+		"/share/doc/ebook2cw/examples/isomap.txt %s/.ebook2cw/",
+		homedir);
+	if (system(tmp)) {
+		printf("Failed to create ~/.ebook2cw/isomap.txt. "
+						"Resuming without config.");
+		return -1;
+	}
+
+	snprintf(tmp, 1024, "install -m 644 "DESTDIR
+		"/share/doc/ebook2cw/examples/utf8map.txt %s/.ebook2cw/",
+		homedir);
+	if (system(tmp)) {
+		printf("Failed to create ~/.ebook2cw/utf8map.txt. "
+						"Resuming without config.");
+		return -1;
+	}
+
+	return 0;
 }
 
 

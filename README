@@ -33,11 +33,21 @@ make install
 
 CGI
 ---
-ebook2cw can also be compiled as a CGI, with "make cgi". The executable can
-then be used on a webserver and called in the format
+ebook2cw can also be compiled as a CGI, with "make cgi" or "make cgibuffered".
+The executable can then be used on a webserver and called in the format
 
 http://example.com/cgi-bin/cw.cgi?s=25&e=25&f=600&t=%20hello%20world
 
 which returns a MP3 file with "hello world" at the given speed etc. The order
 of the GET parameters must be used as shown above. Real-world examples of
 ebook2cw as a CGI can be found at http://lcwo.net/.
+
+The default cgi version operates "on the fly", the "cgibuffered" option 
+first writes the whole MP3/OGG to a temporary file, so it can send a proper
+Content-Length: header which may be used with some clients.
+
+Contact
+-------
+Fabian Kurz, DJ1YFK <fabian@fkurz.net>
+http://fkurz.net/ham/ebook2cw.html
+
