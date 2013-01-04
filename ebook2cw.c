@@ -1838,6 +1838,7 @@ void add_silence (int ms, CWP *cw) {
  */
 
 int install_config_files (char *homedir, CWP *cw) {
+#if !__MINGW32__
 	int j = 0;
 	char tmp[1024] = "";
 	
@@ -1876,7 +1877,7 @@ int install_config_files (char *homedir, CWP *cw) {
 						"Resuming without config.");
 		return -1;
 	}
-
+#endif
 	return 0;
 }
 
