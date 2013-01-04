@@ -1805,12 +1805,14 @@ void guessencoding (char *filename) {
  */ 
 
 void flush_ogg (CWP *cw) {
+#ifdef OGGV
 		while (ogg_stream_flush(&os,&og)) {
 			fwrite(og.header,1,og.header_len,cw->outfile);
 			fwrite(og.body,1,og.body_len,cw->outfile);
 			cw->outfile_length += og.header_len;
 			cw->outfile_length += og.body_len;
 		}
+#endif
 }
 
 /* 
