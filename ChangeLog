@@ -1,3 +1,7 @@
+0.1.1 / 2013-01-01   Fabian Kurz   <fabian@fkurz.net>
+	* Bugfix: On Unix/Linux, actually check current directory
+	  for existence of ebook2cw, not just $PATH [tnx DF9RU]
+
 0.1.0 / 2011-05-07   Fabian Kurz   <mail@fkurz.net>
 
 	* Initial release of ebook2cwgui.

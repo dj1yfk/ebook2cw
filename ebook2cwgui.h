@@ -44,6 +44,8 @@ class Ebook2cw : public wxFrame
 		void OnEwsChange(wxSpinEvent & event);
 		void OnQrqChange(wxSpinEvent & event);
 		void OnToneChange(wxSpinEvent & event);
+		void OnLimitWordsChange(wxSpinEvent & event);
+		void OnLimitSecondsChange(wxSpinEvent & event);
 		void OnWaveChange (wxCommandEvent & event);
 		void OnOutfileChange(wxCommandEvent & event);
 		void OnAuthorChange(wxCommandEvent & event);
@@ -62,6 +64,7 @@ class Ebook2cw : public wxFrame
 		wxString InFilename;
 		wxString OutDir;
 		wxString AddParam;
+		wxString Ebook2cwCmd;
 		bool ResetQrq, NoBT;
 		bool initialized;
 		void ReadConfigFile();

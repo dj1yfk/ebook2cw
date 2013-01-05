@@ -1,7 +1,7 @@
 /* 
 ebook2cwgui - a GUI for ebook2cw
 
-Copyright (C) 2011  Fabian Kurz, DJ1YFK
+Copyright (C) 2011 - 2013 Fabian Kurz, DJ1YFK
 
 $Id$
 
@@ -44,8 +44,8 @@ About::About(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1, -1),
 	wxBoxSizer *vbox = new wxBoxSizer(wxVERTICAL);
 
 	wxStaticText *about = new wxStaticText(panel, wxID_ANY,
-	wxT("ebook2cw-gui v0.1.0 - (c) 2011 by Fabian Kurz, DJ1YFK\n\n"
-	"A Graphical User Interface (GUI) for ebook2cw\n\n"
+	wxT("ebook2cw-gui v0.1.1 - (c) 2011 - 2013 by Fabian Kurz, DJ1YFK\n\n"
+	"A Graphical User Interface (GUI) for ebook2cw, written with wxWidgets\n\n"
 	"This is free software, and you are welcome to redistribute it\n"
 	"under certain conditions (see COPYING).\n\n"
 	"For help and documentation, please refer to the project website:"));

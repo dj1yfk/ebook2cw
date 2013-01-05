@@ -1,7 +1,7 @@
 /* 
 ebook2cwgui - a GUI for ebook2cw
 
-Copyright (C) 2011  Fabian Kurz, DJ1YFK
+Copyright (C) 2011 - 2013  Fabian Kurz, DJ1YFK
 
 $Id$
 
@@ -20,9 +20,12 @@ Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 */
 
-
 #include "ebook2cwgui.h"
 #include "ebook2cw.xpm"
+
+#define MINE2CVERSIONA 0	/* Minimum required ebook2cw version 0.8.2 */
+#define MINE2CVERSIONB 8
+#define MINE2CVERSIONC 2
 
 enum {
 	E2C_infilepick = 1,
@@ -40,9 +43,7 @@ enum {
 	E2C_comment,
 	E2C_year,
 	E2C_fileformat,
-	E2C_limitwordscb,
 	E2C_limitwordsspin,
-	E2C_limitsecondscb,
 	E2C_limitsecondsspin,
 	E2C_resetqrq,
 	E2C_noBT,
@@ -68,6 +69,8 @@ BEGIN_EVENT_TABLE(Ebook2cw, wxFrame)
 	EVT_SPINCTRL(E2C_ews, Ebook2cw::OnEwsChange) 
 	EVT_SPINCTRL(E2C_qrq, Ebook2cw::OnQrqChange) 
 	EVT_SPINCTRL(E2C_tone, Ebook2cw::OnToneChange) 
+	EVT_SPINCTRL(E2C_limitwordsspin, Ebook2cw::OnLimitWordsChange) 
+	EVT_SPINCTRL(E2C_limitsecondsspin, Ebook2cw::OnLimitSecondsChange) 
 	EVT_CHOICE(E2C_wave, Ebook2cw::OnWaveChange) 
 	EVT_TEXT(E2C_outfile, Ebook2cw::OnOutfileChange)
 	EVT_TEXT(E2C_author, Ebook2cw::OnAuthorChange)
@@ -98,6 +101,8 @@ Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1,
 	int spinX = wxDefaultSize.x;
 	int spinY = wxDefaultSize.y;
 #endif	
+
+	Ebook2cwCmd = wxT("ebook2cw");
 
 	SetIcon(wxIcon(ebook2cw_xpm));
 	CreateStatusBar();
@@ -264,17 +269,19 @@ Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1,
 
 	vbox->Add(hbox6, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, 5);
 	
-	wxCheckBox *cb_limitwords = new wxCheckBox(panel, E2C_limitwordscb, wxT("Limit words per chapter to: "));
+	wxStaticText *t_limitwords = new wxStaticText(panel, wxID_ANY, wxT("Limit words per chapter to (0 = off): "));
+	h[wxT("l")].ToLong(&tmp);
 	wxSpinCtrl *spin_limitwords = new wxSpinCtrl(panel, E2C_limitwordsspin, wxEmptyString, wxDefaultPosition,
-			                       wxSize(spinX,spinY), wxSP_ARROW_KEYS, 5, 10000);
-	wxCheckBox *cb_limitseconds = new wxCheckBox(panel, E2C_limitsecondscb, wxT("Limit chapter duration to (sec): "));
+			                       wxSize(spinX,spinY), wxSP_ARROW_KEYS, 0, 10000, tmp);
+	wxStaticText *t_limitseconds = new wxStaticText(panel, wxID_ANY, wxT("Limit chapter duration to (sec, 0 = off): "));
+	h[wxT("d")].ToLong(&tmp);
 	wxSpinCtrl *spin_limitseconds = new wxSpinCtrl(panel, E2C_limitsecondsspin, wxEmptyString, wxDefaultPosition,
-			                       wxSize(spinX,spinY), wxSP_ARROW_KEYS, 5, 10000);
+			                       wxSize(spinX,spinY), wxSP_ARROW_KEYS, 0, 10000, tmp);
 
 
 	wxFlexGridSizer *flexgrid3 = new wxFlexGridSizer(2,0,0);
-	flexgrid3->Add(cb_limitwords); flexgrid3->Add(spin_limitwords, 1, wxEXPAND);
-	flexgrid3->Add(cb_limitseconds); flexgrid3->Add(spin_limitseconds, 1, wxEXPAND);
+	flexgrid3->Add(t_limitwords); flexgrid3->Add(spin_limitwords, 1, wxEXPAND);
+	flexgrid3->Add(t_limitseconds); flexgrid3->Add(spin_limitseconds, 1, wxEXPAND);
 	
 	vbox->Add(flexgrid3, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, 5);
 	
@@ -303,7 +310,7 @@ Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1,
 
 	wxBoxSizer *hbox9 = new wxBoxSizer(wxHORIZONTAL);
 	wxBoxSizer *vbox2 = new wxBoxSizer(wxVERTICAL);
-	wxHyperlinkCtrl *projectlink = new wxHyperlinkCtrl(panel, E2C_websitelink, wxT("ebook2cw-gui v0.1.0"), wxT("http://fkurz.net/ham/ebook2cw.html"));	
+	wxHyperlinkCtrl *projectlink = new wxHyperlinkCtrl(panel, E2C_websitelink, wxT("ebook2cw-gui v0.1.1"), wxT("http://fkurz.net/ham/ebook2cw.html"));	
 	wxStaticText *projectlink2 = new wxStaticText(panel, E2C_websitelink, wxT("by Fabian Kurz, DJ1YFK"));	
 	vbox2->Add(projectlink);
 	vbox2->Add(projectlink2);
@@ -342,7 +349,7 @@ void Ebook2cw::OnFileChange(wxFileDirPickerEvent& event) {
 
 	// Find out encoding by running ebook2cw -g
 	wxArrayString output, errors;
-	wxString cmd = wxT("ebook2cw -g\"") + event.GetPath() + wxT("\"");
+	wxString cmd = Ebook2cwCmd + wxT(" -g\"") + event.GetPath() + wxT("\"");
 
 	int code = wxExecute(cmd, output, errors);
 
@@ -415,7 +422,8 @@ void Ebook2cw::Convert(wxCommandEvent & WXUNUSED(event)) {
 		}
 		/* Disabled commands / value 0*/
 		else if (value == wxT("0") and
-				(param == wxT("e") or param == wxT("Q"))
+		(param == wxT("e") or param == wxT("Q") or
+		 param == wxT("l") or param == wxT("d"))
 				) {
 			/* skip completely */
 		}
@@ -431,19 +439,21 @@ void Ebook2cw::Convert(wxCommandEvent & WXUNUSED(event)) {
 	wxSetWorkingDirectory(OutDir);
 
 #ifdef __WXMSW__
-	if (wxFileExists(oldcwd + wxT("\\ebook2cw.exe"))) {
-		command = wxT("\"") + oldcwd + wxT("\\ebook2cw.exe\" ") + 
-			command;
-//		wxMessageBox(command, wxT(":-)"), wxOK | wxICON_EXCLAMATION);
-		wxExecute(command);
+	if (wxFileExists(oldcwd + wxT("\\ebook2cw.exe"))) {	/* current dir */
+		command = wxT("\"") + oldcwd + wxT("\\ebook2cw.exe\" ") + command;
 	}
 	else {
-		command = wxT("ebook2cw.exe ") + command;
-		wxExecute(command);	/* in PATH */
+		command = wxT("ebook2cw.exe ") + command;	/* in PATH */
 	}
+	wxExecute(command);
 #else
-	command = wxT("ebook2cw ") + command;
-	wxShell(command);	/* ebook2cw in PATH */
+	if (wxFileExists(oldcwd + wxT("/ebook2cw"))) {			/* Current dir */
+		command = oldcwd + wxT("/ebook2cw ") + command;
+	}
+	else {							/* ebook2cw in PATH */
+		command = wxT("ebook2cw ") + command;
+	}
+	wxShell(command);	
 #endif
 
 	wxSetWorkingDirectory(oldcwd);
@@ -492,6 +502,15 @@ void Ebook2cw::OnTitleChange(wxCommandEvent & event) {
 void Ebook2cw::OnCommentChange(wxCommandEvent & event) {
 	h[wxT("k")] = event.GetString(); 
 }
+
+void Ebook2cw::OnLimitWordsChange (wxSpinEvent & event) {
+		h[wxT("l")].Printf(wxT("%d"), event.GetPosition());
+}
+
+void Ebook2cw::OnLimitSecondsChange (wxSpinEvent & event) {
+		h[wxT("d")].Printf(wxT("%d"), event.GetPosition());
+}
+
 
 void Ebook2cw::OnYearChange(wxCommandEvent & event) {
 	wxString tmp = event.GetString(); 
@@ -682,20 +701,50 @@ wxString Ebook2cw::FindConfigFile () {
 void Ebook2cw::FindExecutable () {
 	long i;
 	wxArrayString foo;
-	i = wxExecute(wxT("ebook2cw -h"), foo, wxEXEC_SYNC);
 
-	if (i)
+#ifdef __WXMSW__
+	if (wxFileExists(wxGetCwd() + wxT("\\ebook2cw.exe"))) {	/* current dir */
+		Ebook2cwCmd = wxT("\"") + oldcwd + wxT("\\ebook2cw.exe\" ");
+	}
+	else {
+		Ebook2cwCmd = wxT("ebook2cw.exe");		/* in PATH */
+	}
+#else
+	if (wxFileExists(wxGetCwd() + wxT("/ebook2cw"))) {	/* current dir */
+		Ebook2cwCmd =  wxGetCwd() + wxT("/ebook2cw ");
+	}
+	else {							/* ebook2cw in PATH */
+		Ebook2cwCmd = wxT("ebook2cw");
+	}
+#endif
+
+	i = wxExecute(Ebook2cwCmd + wxT(" -h"), foo, wxEXEC_SYNC);
+	if (i) {
 		wxMessageBox(wxT("ebook2cw executable not found. Please make sure it is either in the same directory as ebook2cwgui, or somewhere in the executable PATH."), wxT("Warning"), wxOK | wxICON_EXCLAMATION);
+		return;
+	}
+
+	/* Extract version information and warn on older version than 0.8.2 */
+	long int x, y, z;
+	foo.Item(0).Mid(9,1).ToLong(&x);
+	foo.Item(0).Mid(11,1).ToLong(&y);
+	foo.Item(0).Mid(13,1).ToLong(&z);
+	wxString v = foo.Item(0).Mid(9, 5);
+	wxString recommended;
+	recommended.Printf(wxT("%d.%d.%d"), MINE2CVERSIONA, MINE2CVERSIONB, MINE2CVERSIONC);
+
+	if ((100*x+10*y+z) < (MINE2CVERSIONA*100+MINE2CVERSIONB*10+MINE2CVERSIONC)) {
+		wxMessageBox(wxT("ebook2cw version (") + v + wxT(") is outdated; some functions may not work. Consider to download a new ebook2cw version (") + recommended+  wxT(" or later)."), wxT("Warning"), wxOK | wxICON_EXCLAMATION);
+	}
+
 }
 
 /* IsPlaintext: returns false if the file selected appears not to be a plain
  * text file, e.g. a MS Word document */
 
 wxString Ebook2cw::IsPlaintext(wxString &s) {
-//	wxCharBuffer buffer=s.ToUTF8();
 	wxFile *f = new wxFile(s.c_str(), wxFile::read);
 	char buf[256];
-	char msoffice[5] = "\xd0\xcf\x11\xe0";
 
 	memset(buf, 0, 256);
 
@@ -708,14 +757,13 @@ wxString Ebook2cw::IsPlaintext(wxString &s) {
 	if (f->Read(buf, 10) != 10) 
 		return wxString(wxT("yes")); /* so short? whatever... */
 
+	f->Close();
+	delete f;
+
 	if (strncmp(buf, "\xd0\xcf\x11\xe0" , 4) == 0) 
 		return wxString(wxT("MS Office"));
 	if (strncmp(buf, "%PDF-" , 5) == 0) 
 		return wxString(wxT("PDF"));
-
-	f->Close();
-	
-	delete f;
 
 	return wxString(wxT("yes"));
 

@@ -27,7 +27,7 @@ Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 
 bool MyApp::OnInit() {
-	Ebook2cw *ebook2cw = new Ebook2cw(wxT("ebook2cw-gui v0.1.0"));
+	Ebook2cw *ebook2cw = new Ebook2cw(wxT("ebook2cw-gui v0.1.1"));
 	ebook2cw->Show(true);
 	return true;
 }
