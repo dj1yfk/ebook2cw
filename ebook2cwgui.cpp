@@ -85,7 +85,7 @@ END_EVENT_TABLE()
 
 Ebook2cw::Ebook2cw(const wxString& title) : wxFrame(NULL, -1, title, wxPoint(-1, -1), 
 #ifdef __WXMSW__
-		wxSize(455, 440)
+		wxSize(455, 480)
 #else
 		wxSize(500, 550)
 #endif	
@@ -457,7 +457,6 @@ void Ebook2cw::Convert(wxCommandEvent & WXUNUSED(event)) {
 #endif
 
 	wxSetWorkingDirectory(oldcwd);
-	
 }
 
 
