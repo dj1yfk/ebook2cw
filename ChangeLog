@@ -1,4 +1,8 @@
-0.1.1 / 2013-01-01   Fabian Kurz   <fabian@fkurz.net>
+0.1.1 / 2013-01-06   Fabian Kurz   <fabian@fkurz.net>
+	* Add new options: Chapter duration (seconds, -d parameter; 
+	  words, -l parameter) can be set now.
+	* Detect version of ebook2cw and warn if it lacks support for
+	  commands used by this GUI version.
 	* Bugfix: On Unix/Linux, actually check current directory
 	  for existence of ebook2cw, not just $PATH [tnx DF9RU]
 
