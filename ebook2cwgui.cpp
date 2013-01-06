@@ -704,7 +704,7 @@ void Ebook2cw::FindExecutable () {
 
 #ifdef __WXMSW__
 	if (wxFileExists(wxGetCwd() + wxT("\\ebook2cw.exe"))) {	/* current dir */
-		Ebook2cwCmd = wxT("\"") + oldcwd + wxT("\\ebook2cw.exe\" ");
+		Ebook2cwCmd = wxT("\"") + wxGetCwd() + wxT("\\ebook2cw.exe\" ");
 	}
 	else {
 		Ebook2cwCmd = wxT("ebook2cw.exe");		/* in PATH */
