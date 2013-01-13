@@ -268,13 +268,16 @@ int main (int argc, char** argv) {
 	start_time = time(NULL);
 	srand((unsigned int) start_time);
 
-	/* Signal handling */
+	/* Signal handling for Ctl-C; not needed for MinGW, where
+	 * Ctl-C while reading from STDIN has the same effect as
+	 * Ctl-D apparently.*/
 
+#if !__MINGW32__
 	if (signal(SIGINT, signalhandler) == SIG_ERR) {
 		fprintf(stderr, "Failed to set up signal handler for SIGINT\n");	
 		return EXIT_FAILURE;
 	}
-
+#endif
 
 #ifndef CGI
 
