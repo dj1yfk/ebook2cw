@@ -1,7 +1,7 @@
 /* 
-ebook2cw - converts an ebook to morse mp3s
+ebook2cw - converts an ebook to Morse MP3/OGG-files
 
-Copyright (C) 2007 - 2012  Fabian Kurz, DJ1YFK
+Copyright (C) 2007 - 2013  Fabian Kurz, DJ1YFK
 
 $Id$
 
@@ -34,6 +34,10 @@ source code looks properly indented with ts=4
 #include <unistd.h>
 #include <ctype.h>
 #include <time.h>
+#ifndef CGI
+#include <signal.h>			/* Ctrl-C handling with signalhandler() */
+#include <setjmp.h>			/* longjmp */
+#endif
 
 /* for mkdir, not used on Windows */
 #if !__MINGW32__
@@ -82,8 +86,12 @@ vorbis_dsp_state vd;
 vorbis_block     vb;
 #endif
 
-/* Struct CWP to keep all CW parameters */
+#ifndef CGI
+/* Globals for longjmp */
+static jmp_buf jmp;
+#endif
 
+/* Struct CWP to keep all CW parameters */
 typedef struct {
 	/* CW parameters */
 	int wpm, 					/* speed, words per minute */
@@ -121,8 +129,9 @@ typedef struct {
 			*noisebuf;
 	unsigned char *mp3buffer;
 	/* Chapter splitting */
-	char chapterstr[80], 		/* split chapters by this string */
-		 chapterfilename[80];
+	char chapterstr[80], 				/* split chapters by this string */
+		 chapterfilename[80],			/* Prefix, e.g. "Chapter-" */
+		 outfilename[256];				/* Full name of current outputfile */
 	/* time based splitting, seconds */
 	int chaptertime;
 	/* word based splitting */
@@ -175,7 +184,8 @@ void  scalebuffer(short int *buf, int length, float factor);
 void  addbuffer (short int *b1, short int *b2, int l);
 char  *timestring (int ms);
 void  guessencoding (char *filename);
-void add_silence (int ms, CWP *cw);
+void  add_silence (int ms, CWP *cw);
+void  signalhandler(int signal);
 
 #ifdef CGI
 int   hexit (char c);
@@ -197,7 +207,7 @@ int main (int argc, char** argv) {
 #ifdef CGI
 	char * querystring;
 	static char text[10000];
-	static char outfilename[1024];
+	static char cgi_outfilename[1024];
 #endif
 
 #ifdef CGIBUFFERED
@@ -257,6 +267,14 @@ int main (int argc, char** argv) {
 	
 	start_time = time(NULL);
 	srand((unsigned int) start_time);
+
+	/* Signal handling */
+
+	if (signal(SIGINT, signalhandler) == SIG_ERR) {
+		fprintf(stderr, "Failed to set up signal handler for SIGINT\n");	
+		return EXIT_FAILURE;
+	}
+
 
 #ifndef CGI
 
@@ -327,9 +345,9 @@ int main (int argc, char** argv) {
 	i = rand();
 	fclose(cw.outfile);
 
-	snprintf(outfilename, 80, "/tmp/%d-%d", start_time, i);
-	if ((cw.outfile = fopen(outfilename, "wb+")) == NULL) {
-	        fprintf(stderr, "Error: Failed to open %s\n", outfilename);
+	snprintf(cgi_outfilename, 80, "/tmp/%d-%d", start_time, i);
+	if ((cw.outfile = fopen(cgi_outfilename, "wb+")) == NULL) {
+	        fprintf(stderr, "Error: Failed to open %s\n", cgi_outfilename);
 	        exit(EXIT_FAILURE);
 	}
 #endif
@@ -363,6 +381,11 @@ int main (int argc, char** argv) {
 	chapter = 0;
 #ifndef CGI
 	openfile(chapter, &cw);
+	/* Entry point for handling SIGINT; we jump back here from
+	 * the signalhandler() function */
+	if (setjmp(jmp)) {
+		goto cleanup;
+	}
 #endif
 
 	i=0;
@@ -458,7 +481,6 @@ int main (int argc, char** argv) {
 
 	} /* eof */
 
-
 /* CGI: Add some silence (500ms) to the end of the file */
 #ifdef CGI
 	add_silence(500, &cw);
@@ -521,7 +543,17 @@ int main (int argc, char** argv) {
 	fclose(cw.outfile);
 	fwrite(cgibuf, sizeof(char), (size_t) i, stdout);
 
-	unlink(outfilename);
+	unlink(cgi_outfilename);
+#endif
+
+	/* NON-CGI operation: If we produced no output, remove the
+	 * empty file */
+#ifndef CGI
+cleanup:
+	if (!chw) {
+		printf("Deleting empty file: %s\n", cw.outfilename);
+		unlink(cw.outfilename);
+	}
 #endif
 
 	return (EXIT_SUCCESS);
@@ -738,17 +770,10 @@ int makeword(char * text, CWP *cw) {
 /* closefile -- finishes writing the current file, flushes the encoder buffer */
 
 void closefile (int chapter, int chw, int chms, CWP *cw) {
-	int outbytes;
-	char outfilename[80] = "";
-
-	outbytes = 0;
+	int outbytes = 0;
 
 	printf("words: %d, time: %s\n", chw, timestring(chms));
-	
-
-	snprintf(outfilename, 80, "%s%04d.%s",  cw->chapterfilename, chapter, 
-			(cw->encoder == MP3) ? "mp3" : "ogg");
-	printf("Finishing %s\n\n",  outfilename);
+	printf("Finishing %s\n\n",  cw->outfilename);
 
 	switch (cw->encoder) {
 		case MP3:
@@ -783,13 +808,13 @@ void closefile (int chapter, int chw, int chms, CWP *cw) {
 
 	if (cw->encoder != NOENC) 
 		fclose(cw->outfile);
+
 }
 
 
 /* openfile -- starts a new chapter by opening a new file as outfile */
 
 void openfile (int chapter, CWP *cw) {
-	char outfilename[80] = "";
 #ifdef LAME
 	static char tmp[80] = "";
 #endif
@@ -799,13 +824,13 @@ void openfile (int chapter, CWP *cw) {
 	ogg_packet       hdr_code;
 #endif
 
-	snprintf(outfilename, 80, "%s%04d.%s",  cw->chapterfilename, chapter, 
+	snprintf(cw->outfilename, 80, "%s%04d.%s",  cw->chapterfilename, chapter, 
 			(cw->encoder == MP3) ? "mp3" : "ogg");
-	printf("Starting %s\n",  outfilename);
+	printf("Starting %s\n",  cw->outfilename);
  
 	if ((cw->encoder != NOENC) && 
-			(cw->outfile = fopen(outfilename, "wb")) == NULL) {
-		fprintf(stderr, "Error: Failed to open %s\n", outfilename);
+			(cw->outfile = fopen(cw->outfilename, "wb")) == NULL) {
+		fprintf(stderr, "Error: Failed to open %s\n", cw->outfilename);
 		exit(EXIT_FAILURE);
 	}
 
@@ -1207,13 +1232,13 @@ void setparameter (char i, char *value, CWP *cw) {
 				help();
 				break;
 			case 'T':
-				if (strstr(value, "SINE") || atoi(value) == 0) {
+				if (strstr(value, "SINE") || strstr(value, "0")) {
 					cw->waveform = SINE;
 				}
-				else if (strstr(value, "SAWTOOTH") || atoi(value) == 1) {
+				else if (strstr(value, "SAWTOOTH") || strstr(value, "1")) {
 					cw->waveform = SAWTOOTH;
 				}
-				else if (strstr(value, "SQUARE") || atoi(value) == 2) {
+				else if (strstr(value, "SQUARE") || strstr(value, "2")) {
 					cw->waveform = SQUARE;	
 				}
 				break;
@@ -1883,6 +1908,13 @@ int install_config_files (char *homedir, CWP *cw) {
 	return 0;
 }
 
+/* We jump here in case of SIGINT */
+#ifndef CGI
+void signalhandler (int signal) {
+	printf("Caught SIGINT... cleaning up.\n");
+	longjmp(jmp,1);
+}
+#endif
 
 /* vim: noai:ts=4:sw=4 
  * */
