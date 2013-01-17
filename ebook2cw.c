@@ -526,6 +526,8 @@ int main (int argc, char** argv) {
 	free(cw.mp3buffer);
 	free(cw.inpcm);
 	free(cw.noisebuf);
+	free(cw.dah_buf);
+	free(cw.dit_buf);
 
 #ifdef CGIBUFFERED
 	/* File is completed, so we know the length and can send the 
@@ -545,6 +547,7 @@ int main (int argc, char** argv) {
 	fread(cgibuf, sizeof(char), (size_t) i, cw.outfile);
 	fclose(cw.outfile);
 	fwrite(cgibuf, sizeof(char), (size_t) i, stdout);
+	free(cgibuf);
 
 	unlink(cgi_outfilename);
 #endif
@@ -1619,6 +1622,7 @@ void filterloop (short int *buf, int l, int b) {
    
    	  buf[k] = (short int) (yv[6] * 255.0);
     }
+  free(in);
 }
 
 
