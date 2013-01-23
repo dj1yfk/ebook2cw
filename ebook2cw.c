@@ -145,7 +145,7 @@ typedef struct {
 	char isomap[256][4]; 		/* by these strings */
 	char utf8map[256][8];
 
-	char configfile[1025];
+	char configfile[2048];
 
 	char id3_author[80],
 		id3_title[80],
@@ -273,14 +273,15 @@ int main (int argc, char** argv) {
 	 * Ctl-D apparently.*/
 
 #if !__MINGW32__
+#ifndef CGI
 	if (signal(SIGINT, signalhandler) == SIG_ERR) {
 		fprintf(stderr, "Failed to set up signal handler for SIGINT\n");	
 		return EXIT_FAILURE;
 	}
 #endif
+#endif
 
 #ifndef CGI
-
 	printf("ebook2cw %s - (c) 2013 by Fabian Kurz, DJ1YFK\n\n", VERSION);
 
 	/* 
@@ -348,7 +349,7 @@ int main (int argc, char** argv) {
 	i = rand();
 	fclose(cw.outfile);
 
-	snprintf(cgi_outfilename, 80, "/tmp/%d-%d", start_time, i);
+	snprintf(cgi_outfilename, 80, "/tmp/%d-%d", (int)start_time, i);
 	if ((cw.outfile = fopen(cgi_outfilename, "wb+")) == NULL) {
 	        fprintf(stderr, "Error: Failed to open %s\n", cgi_outfilename);
 	        exit(EXIT_FAILURE);
