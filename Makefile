@@ -2,7 +2,7 @@
 #
 # $Id$
 
-VERSION=0.8.2
+VERSION=0.8.3
 DESTDIR ?= /usr
 
 # Set to NO to compile without Lame/Ogg-vorbis support

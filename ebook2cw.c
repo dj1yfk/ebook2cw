@@ -1035,6 +1035,11 @@ void command (char * cmd, CWP *cw) {
 			cw->addnoise = 1;
 			cw->snr = i;
 			break;
+		case 'S':
+			if (i > 1 && i < 10000) {
+				add_silence(i, cw);
+			}
+			break;
 		default:
 			fprintf(stderr, "Invalid command %s. Ignored.\n", cmd);				
 	}
