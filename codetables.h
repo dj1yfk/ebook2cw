@@ -1,7 +1,7 @@
 /* 
  * ISO 8859-1 and UTF-8 to Morse code mappings 
  * This file is part of ebook2cw and may be used under the same terms (GPL)
- * (C) 2008 Fabian Kurz, DJ1YFK 
+ * (C) 2008-2013 Fabian Kurz, DJ1YFK 
  *
  * $Id$
  *
@@ -13,7 +13,7 @@
  *                      - Greek
  *                      - Hebrew
  *
- * Any comments, additions or corrections are welcome: mail@fkurz.net 
+ * Any comments, additions or corrections are welcome: fabian@fkurz.net 
  *
  */
 
@@ -406,10 +406,12 @@ const static char *utf8table[] = {
 	"-.-.", "..", "-.-", ".-..", "--", "-.", "-..-", "---", 
 	".--.", ".-.", NULL, "...", "-", "-.--", "..-.", "----", 
 	"--.-", ".--", NULL, NULL, NULL, NULL, NULL, NULL, 
-	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
-	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
-	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
-	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
+	NULL,
+	/* Greek Alphabet, small letters */       
+	".-", "-..." , "--.", "-..", ".", "--..", "....", 
+	"-.-.", "..", "-.-", ".-..", "--", "-.", "-..-", "---", 
+	".--.", ".-.", NULL, "...", "-", "-.--", "..-.", "----", 
+	"--.-", ".--", NULL, NULL, NULL, NULL, NULL, NULL, 
 	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
 	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
 	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
