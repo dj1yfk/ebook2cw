@@ -1,3 +1,6 @@
+0.8.3 / 2013-03-03   Fabian Kurz   <fabian@fkurz.net>
+	* Added lowercase Greek alphabet
+
 0.8.2 / 2013-01-04   Fabian Kurz   <fabian@fkurz.net>
 	* Time of conversion and speed-up calculations
 	* Fixed text command |T0
