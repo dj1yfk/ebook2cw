@@ -259,6 +259,16 @@ int main (int argc, char** argv) {
 			}
 		}
 	}
+
+	/* If we are getting data from a tty, check what the actual encoding is.
+	 * Historically, the default encoding of ebook2cw is ISO 8859-1, but
+	 * nowadays most terminals should use UTF-8. */
+	if (cw.encoding != UTF8 && isatty(fileno(stdin))) {
+		if (strstr(getenv("LANG"), "utf") || strstr(getenv("LANG"), "UTF")) {
+			cw.encoding = UTF8;
+		}
+	}
+
 #endif	/* ifndef CGI */
 
 	/* init encoder (LAME or OGG/Vorbis) */
@@ -377,7 +387,7 @@ int main (int argc, char** argv) {
 #ifndef CGI
 			/* new chapter */
 			if ((strcmp(cw.chapterstr, word) == 0) ||	/* regular */
-					finishchapter == 2
+					finishchapter == 2					/* timeout/max. words */
 			   ) {
 
 				closefile(chapter, chw, chms, &cw);
@@ -673,10 +683,10 @@ int makeword(char * text, CWP *cw) {
 	if (code == NULL) {
 #ifndef CGI
 		if (c < 255) {
-			fprintf(stderr, "Warning: don't know CW for '%c'\n", c);
+			fprintf(stderr, "Warning: Don't know CW for '%c' (try the -u switch to enable UTF-8).\n", c);
 		}
 		else {
-			fprintf(stderr, "Warning: don't know CW for unicode &#%d;\n", c);
+			fprintf(stderr, "Warning: Don't know CW for unicode character &#%d;\n", c);
 		}
 #endif
 		code = " ";
