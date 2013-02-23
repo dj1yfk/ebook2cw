@@ -203,6 +203,7 @@ int main (int argc, char** argv) {
 	int chms = 0, tms = 0, qms = 0; /* millisec: chapter, total, since qrq */
 	time_t start_time, end_time;	/* conversion time */
 	int finishchapter = 0;			/* finish chapter after this sentence */
+	int interactive = 0;			/* 0 for pipe/file input, 1 for tty */
 	FILE *infile;
 
 #ifdef CGI
@@ -224,17 +225,14 @@ int main (int argc, char** argv) {
 	start_time = time(NULL);
 	srand((unsigned int) start_time);
 
-	/* Signal handling for Ctl-C; not needed for MinGW, where
-	 * Ctl-C while reading from STDIN has the same effect as
-	 * Ctl-D apparently.*/
+	/* Signal handling for Ctrl-C -- Does not work on Win32 because
+	 * SIGINT is not supported on that platform. */
 
 #if !__MINGW32__
-#ifndef CGI
 	if (signal(SIGINT, signalhandler) == SIG_ERR) {
 		fprintf(stderr, "Failed to set up signal handler for SIGINT\n");	
 		return EXIT_FAILURE;
 	}
-#endif
 #endif
 
 #ifndef CGI
@@ -263,10 +261,16 @@ int main (int argc, char** argv) {
 	/* If we are getting data from a tty, check what the actual encoding is.
 	 * Historically, the default encoding of ebook2cw is ISO 8859-1, but
 	 * nowadays most terminals should use UTF-8. */
-	if (cw.encoding != UTF8 && isatty(fileno(stdin))) {
+	if (isatty(fileno(infile))) {
+		interactive = 1;
+#if !__MINGW32__
 		if (strstr(getenv("LANG"), "utf") || strstr(getenv("LANG"), "UTF")) {
 			cw.encoding = UTF8;
 		}
+#else
+		/* Assume Windows terminal to be UTF8 */
+		cw.encoding = UTF8;
+#endif
 	}
 
 #endif	/* ifndef CGI */
@@ -293,6 +297,10 @@ int main (int argc, char** argv) {
 	}
 
 	printf("Encoder: %s\n\n", (cw.encoder == OGG) ? "OGG" : "MP3");
+
+	if (interactive) {
+		printf("Interactive mode. Type in text and finish with Ctrl-D.\n\n");
+	}
 
 #endif
 
@@ -378,6 +386,8 @@ int main (int argc, char** argv) {
 
 		if (c == '\r') 			/* DOS linebreaks */
 				continue;
+		if (c == 0x04)			/* EOT (Win32 console produces this for Ctl-D */
+				break;
 
 		word[pos++] = c;
 
