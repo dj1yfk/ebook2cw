@@ -34,10 +34,8 @@ source code looks properly indented with ts=4
 #include <unistd.h>
 #include <ctype.h>
 #include <time.h>
-#ifndef CGI
 #include <signal.h>			/* Ctrl-C handling with signalhandler() */
 #include <setjmp.h>			/* longjmp */
-#endif
 
 /* for mkdir, not used on Windows */
 #if !__MINGW32__
@@ -226,14 +224,13 @@ int main (int argc, char** argv) {
 	srand((unsigned int) start_time);
 
 	/* Signal handling for Ctrl-C -- Does not work on Win32 because
-	 * SIGINT is not supported on that platform. */
+	 * SIGINT is not supported on that platform. There, the signal
+	 * handler will be called but then the program terminates. */
 
-#if !__MINGW32__
 	if (signal(SIGINT, signalhandler) == SIG_ERR) {
 		fprintf(stderr, "Failed to set up signal handler for SIGINT\n");	
 		return EXIT_FAILURE;
 	}
-#endif
 
 #ifndef CGI
 	printf("ebook2cw %s - (c) 2013 by Fabian Kurz, DJ1YFK\n\n", VERSION);
@@ -264,8 +261,11 @@ int main (int argc, char** argv) {
 	if (isatty(fileno(infile))) {
 		interactive = 1;
 #if !__MINGW32__
-		if (strstr(getenv("LANG"), "utf") || strstr(getenv("LANG"), "UTF")) {
-			cw.encoding = UTF8;
+		if (getenv("LANG") != NULL) {
+			if (strstr(getenv("LANG"), "utf") || 
+				strstr(getenv("LANG"), "UTF")) {
+				cw.encoding = UTF8;
+			}
 		}
 #else
 		/* Assume Windows terminal to be UTF8 */
@@ -1895,13 +1895,18 @@ int install_config_files (char *homedir, CWP *cw) {
 	return 0;
 }
 
-/* We jump here in case of SIGINT */
-#ifndef CGI
+/* We jump here in case of SIGINT. On Win32
+ * the program will terminate anyway, so the
+ * longjmp and cleanup procedure will not
+ * work. */
 void signalhandler (int signal) {
-	printf("Caught SIGINT... cleaning up.\n");
+#if !__MINGW32__
+	printf("Caught SIGINT. Cleaning up.\n");
 	longjmp(jmp,1);
-}
+#else
+	printf("Caught SIGINT. Terminating.\n");
 #endif
+}
 
 /* Initialisation of cw parameter struct */
 void init_cwp (CWP *cw) {
