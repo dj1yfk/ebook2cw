@@ -390,7 +390,7 @@ int main (int argc, char** argv) {
 
 		if (c == '\r') 			/* DOS linebreaks */
 				continue;
-		if (c == 0x04)			/* EOT (Win32 console produces this for Ctl-D */
+		if (c == 0x04)			/* EOT; Win32 console produces this for Ctl-D */
 				break;
 
 		word[pos++] = c;
