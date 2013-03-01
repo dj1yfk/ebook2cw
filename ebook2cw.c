@@ -696,11 +696,16 @@ int makeword(char * text, CWP *cw) {
 	/* Not found anything, produce warning message */
 	if (code == NULL) {
 #ifndef CGI
-		if (c < 255) {
-			fprintf(stderr, "Warning: Don't know CW for '%c' (try the -u switch to enable UTF-8).\n", c);
+		if (c < 128) {
+			fprintf(stderr, "Warning: Don't know CW for '%c'.\n", c);
+		}
+		else if (cw->encoding == ISO8859) {
+			fprintf(stderr, "Warning: Don't know CW for '%c' (0x%01X) (try the -u switch to enable UTF-8).\n", c, c);
 		}
 		else {
-			fprintf(stderr, "Warning: Don't know CW for unicode character &#%d;\n", c);
+			/* TODO: Consider using libunistring's unicode_character_name()
+			 * function to provide the name of the character */
+			fprintf(stderr, "Warning: Don't know CW for unicode code point U+%04X\n", c);
 		}
 #endif
 		code = " ";
