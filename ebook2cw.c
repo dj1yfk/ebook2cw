@@ -34,6 +34,13 @@ source code looks properly indented with ts=4
 #include <unistd.h>
 #include <ctype.h>
 #include <time.h>
+
+#include <locale.h>			/* For GNU gettext */
+#include <libintl.h>
+#define _(String) gettext (String)
+#define gettext_noop(String) String
+#define N_(String) gettext_noop (String)
+
 #ifndef CGI
 #include <signal.h>			/* Ctrl-C handling with signalhandler() */
 #include <setjmp.h>			/* longjmp */
@@ -227,17 +234,23 @@ int main (int argc, char** argv) {
 	start_time = time(NULL);
 	srand((unsigned int) start_time);
 
+	/* Native Language Support by GNU gettext */
+	setlocale(LC_ALL, "" );
+	bindtextdomain( "ebook2cw", "" );
+	textdomain("ebook2cw");
+
+
 #ifndef CGI
 	/* Signal handling for Ctrl-C -- Does not work on Win32 because
 	 * SIGINT is not supported on that platform. There, the signal
 	 * handler will be called but then the program terminates. */
 
 	if (signal(SIGINT, signalhandler) == SIG_ERR) {
-		fprintf(stderr, "Failed to set up signal handler for SIGINT\n");	
+		fprintf(stderr, _("Failed to set up signal handler for SIGINT\n"));	
 		return EXIT_FAILURE;
 	}
 
-	printf("ebook2cw %s - (c) 2013 by Fabian Kurz, DJ1YFK\n\n", VERSION);
+	printf(_("ebook2cw %s - (c) 2013 by Fabian Kurz, DJ1YFK\n\n"), VERSION);
 
 	/* 
 	 * Find and read ebook2cw.conf 
@@ -252,7 +265,7 @@ int main (int argc, char** argv) {
 	if (optind < argc) {		/* something left? if so, use as infile */
 		if ((argv[optind][0] != '-') && (argv[optind][0] != '\0')) {
 			if ((infile = fopen(argv[optind], "r")) == NULL) {
-				fprintf(stderr, "Error: Cannot open file %s. Exit.\n", 
+				fprintf(stderr, _("Error: Cannot open file %s. Exit.\n"), 
 								argv[optind]);
 				exit(EXIT_FAILURE);
 			}
@@ -286,24 +299,24 @@ int main (int argc, char** argv) {
 	buf_alloc(&cw);
 
 #ifndef CGI
-	printf("Speed: %dwpm, Freq: %dHz, Chapter: >%s<, Encoding: %s\n", cw.wpm, 
+	printf(_("Speed: %dwpm, Freq: %dHz, Chapter: >%s<, Encoding: %s\n"),cw.wpm, 
 		cw.freq, cw.chapterstr, cw.encoding == UTF8 ? "UTF-8" : "ISO 8859-1");
 
-	printf("Effective speed: %dwpm, ", cw.farnsworth ? cw.farnsworth : cw.wpm);
-	printf("Extra word spaces: %1.1f, ", cw.ews);
-	printf("QRQ: %dmin, reset QRQ: %s\n", cw.qrq, cw.reset ? "yes" : "no");
+	printf(_("Effective speed: %dwpm, "), cw.farnsworth ? cw.farnsworth : cw.wpm);
+	printf(_("Extra word spaces: %1.1f, "), cw.ews);
+	printf(_("QRQ: %dmin, reset QRQ: %s\n"), cw.qrq, cw.reset ? _("yes") : _("no"));
 
 	if (cw.chapterwords) {
-		printf("Chapter limit: %d words, ", cw.chapterwords);
+		printf(_("Chapter limit: %d words, "), cw.chapterwords);
 	}
 	if (cw.chaptertime) {
-		printf("Chapter limit: %d seconds, ", cw.chaptertime);
+		printf(_("Chapter limit: %d seconds, "), cw.chaptertime);
 	}
 
-	printf("Encoder: %s\n\n", (cw.encoder == OGG) ? "OGG" : "MP3");
+	printf(_("Encoder: %s\n\n"), (cw.encoder == OGG) ? "OGG" : "MP3");
 
 	if (interactive) {
-		printf("Interactive mode. Type in text and finish with Ctrl-D.\n\n");
+		printf(_("Interactive mode. Type in text and finish with Ctrl-D.\n\n"));
 	}
 
 #endif
@@ -319,7 +332,7 @@ int main (int argc, char** argv) {
 	 * just using rand(time) won't do if two requests come in the
 	 * same second. temporarily use cw.outfile FD to open urand */
 	if ((cw.outfile = fopen("/dev/urandom", "r")) == NULL) {
-	        fprintf(stderr, "Error: Failed to open /dev/urandom.\n");
+	        fprintf(stderr, _("Error: Failed to open /dev/urandom.\n"));
 	        exit(EXIT_FAILURE);
 	}
 	fread(&i, sizeof(i), 1, cw.outfile);
@@ -329,7 +342,7 @@ int main (int argc, char** argv) {
 
 	snprintf(cgi_outfilename, 80, "/tmp/%d-%d", (int)start_time, i);
 	if ((cw.outfile = fopen(cgi_outfilename, "wb+")) == NULL) {
-	        fprintf(stderr, "Error: Failed to open %s\n", cgi_outfilename);
+	        fprintf(stderr, _("Error: Failed to open %s\n"), cgi_outfilename);
 	        exit(EXIT_FAILURE);
 	}
 #endif
@@ -473,8 +486,8 @@ int main (int argc, char** argv) {
 #ifndef CGI
 	closefile(chapter, chw, chms, &cw);
 	end_time = time(NULL);
-	printf("Total words: %d, total time: %s\n", tw+chw, timestring(tms+chms));
-	printf("Conversion time: %s (Speedup: %.1fx)\n", 
+	printf(_("Total words: %d, total time: %s\n"), tw+chw, timestring(tms+chms));
+	printf(_("Conversion time: %s (Speedup: %.1fx)\n"), 
 			timestring(1000.0 * difftime(end_time, start_time)), 
 			((tms+chms)/(1000.0 * difftime(end_time,start_time)))
 	);
@@ -520,7 +533,7 @@ int main (int argc, char** argv) {
 	 * easier and faster... */
 	cgibuf = malloc((size_t) i+1);
 	if (cgibuf == NULL) {
-		fprintf(stderr, "malloc() for cgibuf failed!\n");
+		fprintf(stderr, _("malloc() for cgibuf failed!\n"));
 		exit(EXIT_FAILURE);
 	}
 	fread(cgibuf, sizeof(char), (size_t) i, cw.outfile);
@@ -536,7 +549,7 @@ int main (int argc, char** argv) {
 #ifndef CGI
 cleanup:
 	if (!chw) {
-		printf("Deleting empty file: %s\n", cw.outfilename);
+		printf(_("Deleting empty file: %s\n"), cw.outfilename);
 		unlink(cw.outfilename);
 	}
 #endif
@@ -557,8 +570,8 @@ void init_cw (CWP *cw) {
 	/* calculate farnsworth length samples */
 	if (cw->farnsworth) {
 		if (cw->farnsworth > cw->wpm) {
-			fprintf(stderr, "Warning: Effective speed (-e %d) must be lower "
-							"than character speed (-w %d)! Speed adjusted.\n", 
+			fprintf(stderr, _("Warning: Effective speed (-e %d) must be lower "
+							"than character speed (-w %d)! Speed adjusted.\n"), 
 							cw->farnsworth, cw->wpm);
 			cw->farnsworth = cw->wpm;
 		}
@@ -571,11 +584,11 @@ void init_cw (CWP *cw) {
 	/* size of dit_buf, dah_buf may have to be increased, when speed decreased */
 	if (len > cw->ditlen) {
 		if ((cw->dah_buf = realloc(cw->dah_buf, 3*len * sizeof(short int))) == NULL) {
-			fprintf(stderr, "Error: Can't reallocate dah_buf[%d]\n", 3*len);
+			fprintf(stderr, _("Error: Can't reallocate dah_buf[%d]\n"), 3*len);
 			exit(EXIT_FAILURE);
 		}
 		if ((cw->dit_buf = realloc(cw->dit_buf, len * sizeof(short int))) == NULL) {
-			fprintf(stderr, "Error: Can't allocate dit_buf[%d]\n", len);
+			fprintf(stderr, _("Error: Can't allocate dit_buf[%d]\n"), len);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -697,15 +710,15 @@ int makeword(char * text, CWP *cw) {
 	if (code == NULL) {
 #ifndef CGI
 		if (c < 128) {
-			fprintf(stderr, "Warning: Don't know CW for '%c'.\n", c);
+			fprintf(stderr, _("Warning: Don't know CW for '%c'.\n"), c);
 		}
 		else if (cw->encoding == ISO8859) {
-			fprintf(stderr, "Warning: Don't know CW for '%c' (0x%01X) (try the -u switch to enable UTF-8).\n", c, c);
+			fprintf(stderr, _("Warning: Don't know CW for '%c' (0x%01X) (try the -u switch to enable UTF-8).\n"), c, c);
 		}
 		else {
 			/* TODO: Consider using libunistring's unicode_character_name()
 			 * function to provide the name of the character */
-			fprintf(stderr, "Warning: Don't know CW for unicode code point U+%04X\n", c);
+			fprintf(stderr, _("Warning: Don't know CW for unicode code point U+%04X\n"), c);
 		}
 #endif
 		code = " ";
@@ -762,8 +775,8 @@ int makeword(char * text, CWP *cw) {
 void closefile (int chapter, int chw, int chms, CWP *cw) {
 	int outbytes = 0;
 
-	printf("words: %d, time: %s\n", chw, timestring(chms));
-	printf("Finishing %s\n\n",  cw->outfilename);
+	printf(_("words: %d, time: %s\n"), chw, timestring(chms));
+	printf(_("Finishing %s\n\n"),  cw->outfilename);
 
 	switch (cw->encoder) {
 		case MP3:
@@ -816,11 +829,11 @@ void openfile (int chapter, CWP *cw) {
 
 	snprintf(cw->outfilename, 80, "%s%04d.%s",  cw->chapterfilename, chapter, 
 			(cw->encoder == MP3) ? "mp3" : "ogg");
-	printf("Starting %s\n",  cw->outfilename);
+	printf(_("Starting %s\n"),  cw->outfilename);
  
 	if ((cw->encoder != NOENC) && 
 			(cw->outfile = fopen(cw->outfilename, "wb")) == NULL) {
-		fprintf(stderr, "Error: Failed to open %s\n", cw->outfilename);
+		fprintf(stderr, _("Error: Failed to open %s\n"), cw->outfilename);
 		exit(EXIT_FAILURE);
 	}
 
@@ -859,19 +872,19 @@ void openfile (int chapter, CWP *cw) {
 
 
 void help (void) {
-	printf("This is free software, and you are welcome to redistribute it\n"); 
-	printf("under certain conditions (see COPYING).\n");
+	printf(_("This is free software, and you are welcome to redistribute it\n")); 
+	printf(_("under certain conditions (see COPYING).\n"));
 	printf("\n");
-	printf("ebook2cw [-w wpm] [-f freq] [-R risetime] [-F falltime]\n");
-	printf("         [-s samplerate] [-b mp3bitrate] [-q mp3quality] [-p]\n");
-	printf("         [-c chapter-separator] [-o outfile-name] [-Q minutes]\n");
-	printf("         [-a author] [-t title] [-k comment] [-y year]\n");
-	printf("         [-u] [-S ISO|UTF] [-n] [-e eff.wpm] [-W space]\n");
-	printf("         [-N snr] [-B filter bandwidth] [-C filter center]\n");
-	printf("         [-T 0..2] [-g filename] [-l words] [-d seconds]\n");
-	printf("         [infile]\n\n");
-	printf("defaults: 25 WpM, 600Hz, RT=FT=50, s=11025Hz, b=16kbps,\n");
-	printf("          c=\"CHAPTER\", o=\"Chapter\" infile = stdin\n");
+	printf(_("ebook2cw [-w wpm] [-f freq] [-R risetime] [-F falltime]\n"));
+	printf(_("         [-s samplerate] [-b mp3bitrate] [-q mp3quality] [-p]\n"));
+	printf(_("         [-c chapter-separator] [-o outfile-name] [-Q minutes]\n"));
+	printf(_("         [-a author] [-t title] [-k comment] [-y year]\n"));
+	printf(_("         [-u] [-S ISO|UTF] [-n] [-e eff.wpm] [-W space]\n"));
+	printf(_("         [-N snr] [-B filter bandwidth] [-C filter center]\n"));
+	printf(_("         [-T 0..2] [-g filename] [-l words] [-d seconds]\n"));
+	printf(_("         [infile]\n\n"));
+	printf(_("defaults: 25 WpM, 600Hz, RT=FT=50, s=11025Hz, b=16kbps,\n"));
+	printf(_("          c=\"CHAPTER\", o=\"Chapter\" infile = stdin\n"));
 	printf("\n");
 	printf("Compile options: USE_LAME="
 #ifdef LAME
@@ -887,7 +900,7 @@ void help (void) {
 #endif
 		"DESTDIR="DESTDIR"\n");
 	printf("\n");
-	printf("Project website: http://fkurz.net/ham/ebook2cw.html\n");
+	printf(_("Project website: http://fkurz.net/ham/ebook2cw.html\n"));
 	exit(EXIT_SUCCESS);
 }
 
@@ -983,7 +996,7 @@ void command (char * cmd, CWP *cw) {
 				init_cw(cw);
 			}
 			else 
-				fprintf(stderr, "Invalid frequency: %s. Ignored.\n", cmd);
+				fprintf(stderr, _("Invalid frequency: %s. Ignored.\n"), cmd);
 			break;
 		case 'w':
 			if (i > 1) {
@@ -991,7 +1004,7 @@ void command (char * cmd, CWP *cw) {
 				init_cw(cw);
 			}
 			else 
-				fprintf(stderr, "Invalid speed: %s. Ignored.\n", cmd);
+				fprintf(stderr, _("Invalid speed: %s. Ignored.\n"), cmd);
 			break;
 		case 'e':
 			if (i > 1) {
@@ -999,7 +1012,7 @@ void command (char * cmd, CWP *cw) {
 				init_cw(cw);
 			}
 			else 
-				fprintf(stderr, "Invalid speed: %s. Ignored.\n", cmd);
+				fprintf(stderr, _("Invalid speed: %s. Ignored.\n"), cmd);
 			break;
 		case 'T':
 			if (i >= 0 && i < 3) {
@@ -1007,7 +1020,7 @@ void command (char * cmd, CWP *cw) {
 				init_cw(cw);
 			}
 			else 
-				fprintf(stderr, "Invalid waveform: %d. Ignored.\n", i);
+				fprintf(stderr, _("Invalid waveform: %d. Ignored.\n"), i);
 			break;
 		case 'v':
 				init_cw(cw);
@@ -1024,7 +1037,7 @@ void command (char * cmd, CWP *cw) {
 			}
 			break;
 		default:
-			fprintf(stderr, "Invalid command %s. Ignored.\n", cmd);				
+			fprintf(stderr, _("Invalid command %s. Ignored.\n"), cmd);				
 	}
 }
 
@@ -1077,7 +1090,7 @@ void readconfig (CWP *cw) {
 
 				/* open newly installed config file ... */
 				if ((conf = fopen(cw->configfile, "r")) == NULL) {
-					printf("Couldn't read %s! Continue without config.",
+					printf(_("Couldn't read %s! Continue without config."),
 									cw->configfile);
 					return;
 				}
@@ -1095,7 +1108,7 @@ void readconfig (CWP *cw) {
 	 * Read config file
 	 */
 
-	printf("Reading configuration file: %s\n\n", cw->configfile);
+	printf(_("Reading configuration file: %s\n\n"), cw->configfile);
 
 	/* We start in the [settings] section.
 	 * All settings are ^[a-zA-Z]=.+$ 
@@ -1132,7 +1145,7 @@ void setparameter (char i, char *value, CWP *cw) {
 		switch (i) {
 			case 'w':
 				if ((cw->wpm = atoi(value)) < 1) {
-					fprintf(stderr, "Error: Speed (-w) must be > 0!\n");
+					fprintf(stderr, _("Error: Speed (-w) must be > 0!\n"));
 					exit(EXIT_FAILURE);
 				}
 				break;
@@ -1180,7 +1193,7 @@ void setparameter (char i, char *value, CWP *cw) {
 				break;
 			case 'Q':
 				if ((cw->qrq = atoi(value)) < 1) {
-					fprintf(stderr, "Error: QRQ time (-Q) must be > 0!\n");
+					fprintf(stderr, _("Error: QRQ time (-Q) must be > 0!\n"));
 					exit(EXIT_FAILURE);
 				}
 				break;
@@ -1197,7 +1210,7 @@ void setparameter (char i, char *value, CWP *cw) {
 				break;
 			case 'e':				/* effective speed in WpM */
 				if ((cw->farnsworth = atoi(value)) < 1) {
-					fprintf(stderr, "Error: Eff. speed (-e) must be > 0!\n");
+					fprintf(stderr, _("Error: Eff. speed (-e) must be > 0!\n"));
 					exit(EXIT_FAILURE);
 				}
 				break;
@@ -1211,7 +1224,7 @@ void setparameter (char i, char *value, CWP *cw) {
 #ifdef OGGV
 				cw->encoder = OGG;
 #else
-				fprintf(stderr, "Warning: ebook2cw was compiled without OGG support! Using Lame encoder.\n\n");
+				fprintf(stderr, _("Warning: ebook2cw was compiled without OGG support! Using Lame encoder.\n\n"));
 #endif
 				break;
 			case 'X':					/* "Fake" */
@@ -1241,8 +1254,8 @@ void setparameter (char i, char *value, CWP *cw) {
 				cw->snr = atoi(value);
 				cw->addnoise = 1;
 				if ((cw->snr < -10) || (cw->snr > 10)) {
-					fprintf(stderr, "Warning: SNR %ddB not implemented."
-									" Noise disabled.\n\n", cw->snr);
+					fprintf(stderr, _("Warning: SNR %ddB not implemented."
+									" Noise disabled.\n\n"), cw->snr);
 					cw->addnoise = 0;
 					cw->snr = 0;
 				}
@@ -1276,8 +1289,8 @@ void loadmapping(char *file, int enc, CWP *cw) {
 	char s[6]="";
 
 	if ((mp = fopen(file, "r")) == NULL) {
-		fprintf(stderr, "Warning: Unable to open mapping file %s. Ignored.\n", 
-								file);
+		fprintf(stderr, _("Warning: Unable to open mapping file %s. Ignored.\n")
+				, file);
 		return;
 	}
 
@@ -1321,8 +1334,8 @@ void loadmapping(char *file, int enc, CWP *cw) {
 
 		/* only memory for 256 mappings allocated. never going to happen */
 		if (i == 255) {
-			fprintf(stderr, "Warning: Maximum number (256) of mappings reached"
-							" in %s! Stopped here.", file);
+			fprintf(stderr, _("Warning: Maximum number (256) of mappings "
+						"reached in %s! Stopped here."), file);
 			break;
 		}
 
@@ -1798,11 +1811,11 @@ void guessencoding (char *filename) {
 	int is_iso   = 1;
 
 	if ((infile = fopen(filename, "r")) == NULL) {
-		fprintf(stderr, "Error: Cannot open file %s. Exit.\n", filename);
+		fprintf(stderr, _("Error: Cannot open file %s. Exit.\n"), filename);
 		exit(EXIT_FAILURE);
 	}
 
-	printf("Guessed file format of %s: ", filename);
+	printf(_("Guessed file format of %s: "), filename);
 
 	while ((c = getc(infile)) != EOF) {
 		if ((c & 224) == 192) {		/* check if highest 3 bits are 110=224 */
@@ -1865,12 +1878,12 @@ int install_config_files (char *homedir, CWP *cw) {
 	int j = 0;
 	char tmp[1024] = "";
 	
-	printf("First run. Copying example configuration files to "
-		"%s/.ebook2cw/\n\n", homedir);
+	printf(_("First run. Copying example configuration files to "
+		"%s/.ebook2cw/\n\n"), homedir);
 	snprintf(tmp, 1024, "%s/.ebook2cw/", homedir);
 	j = mkdir(tmp, 0777);
 	if (j && (errno != EEXIST)) {
-		printf("Failed to create %s. Resuming without config.",tmp);
+		printf(_("Failed to create %s. Resuming without config."), tmp);
 		return -1;
 	}
 	/* ~/.ebook2cw/ created. Now copy ebook2cw.conf and map files */
@@ -1878,8 +1891,8 @@ int install_config_files (char *homedir, CWP *cw) {
 		"/share/doc/ebook2cw/examples/ebook2cw.conf %s/.ebook2cw/",
 		homedir);
 	if (system(tmp)) {
-		printf("Failed to create ~/.ebook2cw/ebook2cw.conf. "
-						"Resuming without config.");
+		printf(_("Failed to create ~/.ebook2cw/ebook2cw.conf. "
+						"Resuming without config."));
 		return -1;
 	}
 
@@ -1887,8 +1900,8 @@ int install_config_files (char *homedir, CWP *cw) {
 		"/share/doc/ebook2cw/examples/isomap.txt %s/.ebook2cw/",
 		homedir);
 	if (system(tmp)) {
-		printf("Failed to create ~/.ebook2cw/isomap.txt. "
-						"Resuming without config.");
+		printf(_("Failed to create ~/.ebook2cw/isomap.txt. "
+						"Resuming without config."));
 		return -1;
 	}
 
@@ -1896,8 +1909,8 @@ int install_config_files (char *homedir, CWP *cw) {
 		"/share/doc/ebook2cw/examples/utf8map.txt %s/.ebook2cw/",
 		homedir);
 	if (system(tmp)) {
-		printf("Failed to create ~/.ebook2cw/utf8map.txt. "
-						"Resuming without config.");
+		printf(_("Failed to create ~/.ebook2cw/utf8map.txt. "
+						"Resuming without config."));
 		return -1;
 	}
 #endif
@@ -1911,10 +1924,10 @@ int install_config_files (char *homedir, CWP *cw) {
 #ifndef CGI
 void signalhandler (int signal) {
 #if !__MINGW32__
-	printf("Caught SIGINT. Cleaning up.\n");
+	printf(_("Caught SIGINT. Cleaning up.\n"));
 	longjmp(jmp,1);
 #else
-	printf("Caught SIGINT. Terminating.\n");
+	printf(_("Caught SIGINT. Terminating.\n"));
 #endif
 }
 #endif
@@ -1951,8 +1964,8 @@ void init_cwp (CWP *cw) {
 	cw->noisebuf_size = NOISEBUFFER;
 	cw->mp3buffer_size = MP3BUFFER;
 	cw->ditlen = 0;
-	strcpy(cw->chapterstr, "CHAPTER");
-	strcpy(cw->chapterfilename, "Chapter");
+	strcpy(cw->chapterstr, _("CHAPTER"));
+	strcpy(cw->chapterfilename, _("Chapter"));
 
 	cw->chaptertime = 0;
 	cw->chapterwords = 0;
@@ -1962,9 +1975,9 @@ void init_cwp (CWP *cw) {
 
 	strcpy(cw->configfile, "ebook2cw.conf");
 
-	strcpy(cw->id3_author, "CW audio book");
+	strcpy(cw->id3_author, _("CW audio book"));
 	strcpy(cw->id3_title, "");
-	strcpy(cw->id3_comment, "Generated by ebook2cw");
+	strcpy(cw->id3_comment, _("Generated by ebook2cw"));
 	strcpy(cw->id3_year, "");
 
 	cw->outfile_length = 0;
