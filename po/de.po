@@ -1,0 +1,362 @@
+# ebook2cw - German Translation
+# Copyright (C) 2013 Fabian Kurz <fabian@fkurz.net>
+# This file is distributed under the same license as the ebook2cw package.
+# Fabian Kurz <fabian@fkurz.net>, 2013
+#
+#, ebook2cw 
+msgid ""
+msgstr ""
+"Project-Id-Version: 0.3.1\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2013-03-01 23:33+0100\n"
+"PO-Revision-Date: 2013-03-02 21:00+0100\n"
+"Last-Translator: Fabian Kurz <fabian@fkurz.net>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ebook2cw.c:249
+#, c-format
+msgid "Failed to set up signal handler for SIGINT\n"
+msgstr "Signal Handler für SIGINT konnte nicht erstellt werden.\n"
+
+#: ebook2cw.c:253
+#, c-format
+msgid ""
+"ebook2cw %s - (c) 2013 by Fabian Kurz, DJ1YFK\n"
+"\n"
+msgstr "ebook2cw %s - (c) 2013 von Fabian Kurz, DJ1YFK\n\n"
+
+#: ebook2cw.c:268 ebook2cw.c:1814
+#, c-format
+msgid "Error: Cannot open file %s. Exit.\n"
+msgstr "Fehler: Datei %s kann nicht geöffnet werden. Abbruch.\n"
+
+#: ebook2cw.c:302
+#, c-format
+msgid "Speed: %dwpm, Freq: %dHz, Chapter: >%s<, Encoding: %s\n"
+msgstr "Tempo: %d WpM, Ton: %d Hz, Kapitel-Trenner: >%s<, Kodierung: %s\n"
+
+#: ebook2cw.c:305
+#, c-format
+msgid "Effective speed: %dwpm, "
+msgstr "Eff. Tempo: %d WpM, "
+
+#: ebook2cw.c:306
+#, c-format
+msgid "Extra word spaces: %1.1f, "
+msgstr "Extra Wortpausen: %1.1f, "
+
+#: ebook2cw.c:307
+#, c-format
+msgid "QRQ: %dmin, reset QRQ: %s\n"
+msgstr "QRQ: %d min, QRQ zurücksetzen: %s\n"
+
+#: ebook2cw.c:307
+msgid "yes"
+msgstr "ja"
+
+#: ebook2cw.c:307
+msgid "no"
+msgstr "nein"
+
+#: ebook2cw.c:310
+#, c-format
+msgid "Chapter limit: %d words, "
+msgstr "Max. Worte pro Kapitel: %d, "
+
+#: ebook2cw.c:313
+#, c-format
+msgid "Chapter limit: %d seconds, "
+msgstr "Max. Zeit pro Kapitel: %d sek., "
+
+#: ebook2cw.c:316
+#, c-format
+msgid ""
+"Encoder: %s\n"
+"\n"
+msgstr "Encoder: %s\n\n"
+
+#: ebook2cw.c:319
+#, c-format
+msgid ""
+"Interactive mode. Type in text and finish with Ctrl-D.\n"
+"\n"
+msgstr "Interaktiver Modus. Text eingeben und mit Strg-D beenden.\n\n"
+
+#: ebook2cw.c:335
+#, c-format
+msgid "Error: Failed to open /dev/urandom.\n"
+msgstr "Fehler: Konnte /dev/urandom nicht öffnen!\n"
+
+#: ebook2cw.c:345 ebook2cw.c:836
+#, c-format
+msgid "Error: Failed to open %s\n"
+msgstr "Fehler: Konnte %s nicht öffnen.\n"
+
+#: ebook2cw.c:489
+#, c-format
+msgid "Total words: %d, total time: %s\n"
+msgstr "Anzahl Worte: %d, Zeit: %s\n"
+
+#: ebook2cw.c:490
+#, c-format
+msgid "Conversion time: %s (Speedup: %.1fx)\n"
+msgstr "Übersetzt in: %s (Faktor: %.1f)\n"
+
+#: ebook2cw.c:536
+#, c-format
+msgid "malloc() for cgibuf failed!\n"
+msgstr "malloc() für cgibuf fehlgeschlagen!\n"
+
+#: ebook2cw.c:552
+#, c-format
+msgid "Deleting empty file: %s\n"
+msgstr "Lösche leere Datei: %s\n"
+
+#: ebook2cw.c:573
+#, c-format
+msgid ""
+"Warning: Effective speed (-e %d) must be lower than character speed (-w %d)! "
+"Speed adjusted.\n"
+msgstr "Warning: Effektivtempo (%d) muss geringer als Zeichentempo sein (%d).\n"
+
+#: ebook2cw.c:587
+#, c-format
+msgid "Error: Can't reallocate dah_buf[%d]\n"
+msgstr "Fehler: Kann dah_buf[%d] nicht zuweisen.\n"
+
+#: ebook2cw.c:591
+#, c-format
+msgid "Error: Can't allocate dit_buf[%d]\n"
+msgstr "Fehler: Kann dit_buf[%d] nicht zuweisen.\n"
+
+#: ebook2cw.c:713
+#, c-format
+msgid "Warning: Don't know CW for '%c'.\n"
+msgstr "Warnung: Kenne kein CW-Zeichen für '%c'.\n"
+
+#: ebook2cw.c:716
+#, c-format
+msgid ""
+"Warning: Don't know CW for '%c' (0x%01X) (try the -u switch to enable UTF-"
+"8).\n"
+msgstr "Warnung: Kenne kein CW-Zeichen für '%c' (0x%01X). Ist Eingabe UTF-8-Kodiert?\n"
+
+#: ebook2cw.c:721
+#, c-format
+msgid "Warning: Don't know CW for unicode code point U+%04X\n"
+msgstr "Warnung: Kenne kein CW-Zeichen für Unicode U+%04X.\n"
+
+#: ebook2cw.c:778
+#, c-format
+msgid "words: %d, time: %s\n"
+msgstr "Worte: %d, Zeit: %s\n"
+
+#: ebook2cw.c:779
+#, c-format
+msgid ""
+"Finishing %s\n"
+"\n"
+msgstr "Schließe Datei %s ab.\n\n"
+
+#: ebook2cw.c:832
+#, c-format
+msgid "Starting %s\n"
+msgstr "Öffne Datei %s\n"
+
+#: ebook2cw.c:875
+#, c-format
+msgid "This is free software, and you are welcome to redistribute it\n"
+msgstr ""
+
+#: ebook2cw.c:876
+#, c-format
+msgid "under certain conditions (see COPYING).\n"
+msgstr ""
+
+#: ebook2cw.c:878
+#, c-format
+msgid "ebook2cw [-w wpm] [-f freq] [-R risetime] [-F falltime]\n"
+msgstr ""
+
+#: ebook2cw.c:879
+#, c-format
+msgid "         [-s samplerate] [-b mp3bitrate] [-q mp3quality] [-p]\n"
+msgstr ""
+
+#: ebook2cw.c:880
+#, c-format
+msgid "         [-c chapter-separator] [-o outfile-name] [-Q minutes]\n"
+msgstr ""
+
+#: ebook2cw.c:881
+#, c-format
+msgid "         [-a author] [-t title] [-k comment] [-y year]\n"
+msgstr ""
+
+#: ebook2cw.c:882
+#, c-format
+msgid "         [-u] [-S ISO|UTF] [-n] [-e eff.wpm] [-W space]\n"
+msgstr ""
+
+#: ebook2cw.c:883
+#, c-format
+msgid "         [-N snr] [-B filter bandwidth] [-C filter center]\n"
+msgstr ""
+
+#: ebook2cw.c:884
+#, c-format
+msgid "         [-T 0..2] [-g filename] [-l words] [-d seconds]\n"
+msgstr ""
+
+#: ebook2cw.c:885
+#, c-format
+msgid ""
+"         [infile]\n"
+"\n"
+msgstr ""
+
+#: ebook2cw.c:886
+#, c-format
+msgid "defaults: 25 WpM, 600Hz, RT=FT=50, s=11025Hz, b=16kbps,\n"
+msgstr ""
+
+#: ebook2cw.c:887
+#, c-format
+msgid "          c=\"CHAPTER\", o=\"Chapter\" infile = stdin\n"
+msgstr ""
+
+#: ebook2cw.c:903
+#, c-format
+msgid "Project website: http://fkurz.net/ham/ebook2cw.html\n"
+msgstr "Projektwebseite: http://fkurz.net/ham/ebook2cw.html\n"
+
+#: ebook2cw.c:999
+#, c-format
+msgid "Invalid frequency: %s. Ignored.\n"
+msgstr "Ungültige Frequenz: %s - Ignoriert.\n"
+
+#: ebook2cw.c:1007 ebook2cw.c:1015
+#, c-format
+msgid "Invalid speed: %s. Ignored.\n"
+msgstr "Ungültige Geschwindigkeit: %s - Ignoriert.\n"
+
+#: ebook2cw.c:1023
+#, c-format
+msgid "Invalid waveform: %d. Ignored.\n"
+msgstr "Ungültige Wellenform: %s - Ignoriert.\n"
+
+#: ebook2cw.c:1040
+#, c-format
+msgid "Invalid command %s. Ignored.\n"
+msgstr "Ungültiger Befehl %s. Ignoriert.\n"
+
+#: ebook2cw.c:1093
+#, c-format
+msgid "Couldn't read %s! Continue without config."
+msgstr "Konnte Konfiguration (%s) nicht lesen. Weiter mit Standardwerten."
+
+#: ebook2cw.c:1111
+#, c-format
+msgid ""
+"Reading configuration file: %s\n"
+"\n"
+msgstr "Lese Konfigurationsdatei: %s\n\n"
+
+#: ebook2cw.c:1148
+#, c-format
+msgid "Error: Speed (-w) must be > 0!\n"
+msgstr "Fehler: Tempo (-w) muss größer als 0 sein!\n"
+
+#: ebook2cw.c:1196
+#, c-format
+msgid "Error: QRQ time (-Q) must be > 0!\n"
+msgstr "Fehler: QRQ-Intervall (-Q) muss größer als 0 sein!\n"
+
+#: ebook2cw.c:1213
+#, c-format
+msgid "Error: Eff. speed (-e) must be > 0!\n"
+msgstr "Fehler: Effektivgeschwindigkeit (-e) muss größer als 0 sein!\n"
+
+#: ebook2cw.c:1227
+#, c-format
+msgid ""
+"Warning: ebook2cw was compiled without OGG support! Using Lame encoder.\n"
+"\n"
+msgstr "Warning: ebook2cw wurde ohne OGG-Unterstützung kompiliert. Verwende LAME.\n"
+
+#: ebook2cw.c:1257
+#, c-format
+msgid ""
+"Warning: SNR %ddB not implemented. Noise disabled.\n"
+"\n"
+msgstr "Warning: SNR %ddB nicht implementiert. Es wird kein Rauschen erzeugt.\n\n"
+
+#: ebook2cw.c:1292
+#, c-format
+msgid "Warning: Unable to open mapping file %s. Ignored.\n"
+msgstr "Warnung: Konnte Datei mit Zeichenzuordnungen (%s) nicht öffnen.\n"
+
+#: ebook2cw.c:1337
+#, c-format
+msgid "Warning: Maximum number (256) of mappings reached in %s! Stopped here."
+msgstr "Warnung: Maximale Anzahl (256) von Zeichenzuordnungen erreicht in %s."
+
+#: ebook2cw.c:1818
+#, c-format
+msgid "Guessed file format of %s: "
+msgstr "Dateiformat von %s:"
+
+#: ebook2cw.c:1881
+#, c-format
+msgid ""
+"First run. Copying example configuration files to %s/.ebook2cw/\n"
+"\n"
+msgstr "Erster Programmaufruf. Kopiere Beispielkonfiguration nach %s/.ebook2cw/\n\n"
+
+#: ebook2cw.c:1886
+#, c-format
+msgid "Failed to create %s. Resuming without config."
+msgstr "Konnte %s nicht erstellen. Weiter ohne Konfiguration."
+
+#: ebook2cw.c:1894
+#, c-format
+msgid "Failed to create ~/.ebook2cw/ebook2cw.conf. Resuming without config."
+msgstr "Konnte ~/.ebook2cw/ebook2cw.conf nicht erstellen. Weiter ohne Konfiguration."
+
+#: ebook2cw.c:1903
+#, c-format
+msgid "Failed to create ~/.ebook2cw/isomap.txt. Resuming without config."
+msgstr "Konnte ~/.ebook2cw/isomap.txt nicht erstellen. Weiter ohne Konfiguration."
+
+#: ebook2cw.c:1912
+#, c-format
+msgid "Failed to create ~/.ebook2cw/utf8map.txt. Resuming without config."
+msgstr "Konnte ~/.ebook2cw/utf8map.txt nicht erstellen. Weiter ohne Konfiguration."
+
+#: ebook2cw.c:1927
+#, c-format
+msgid "Caught SIGINT. Cleaning up.\n"
+msgstr "SIGINT-Signal empfangen. Räume auf und beende...\n"
+
+#: ebook2cw.c:1930
+#, c-format
+msgid "Caught SIGINT. Terminating.\n"
+msgstr "SIGINT-Signal empfangen. Beende...\n"
+
+#: ebook2cw.c:1967
+msgid "CHAPTER"
+msgstr "KAPITEL"
+
+#: ebook2cw.c:1968
+msgid "Chapter"
+msgstr "Kapitel"
+
+#: ebook2cw.c:1978
+msgid "CW audio book"
+msgstr "CW Hörbuch"
+
+#: ebook2cw.c:1980
+msgid "Generated by ebook2cw"
+msgstr "Erstellt mit ebook2cw"

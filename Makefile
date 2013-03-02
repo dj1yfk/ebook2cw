@@ -53,7 +53,7 @@ uninstall:
 	rm -rf $(DESTDIR)/share/doc/ebook2cw
 
 clean:
-	rm -f ebook2cw *~ *.mp3 *.ogg *.cgi ebook2cw.exe
+	rm -f ebook2cw *~ *.mp3 *.ogg *.cgi ebook2cw.exe po/*.mo
 
 dist:
 	sed 's/v[0-9].[0-9].[0-9]/v$(VERSION)/g' README > README2
