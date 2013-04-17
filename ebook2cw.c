@@ -208,6 +208,7 @@ int main (int argc, char** argv) {
 	int pos, i, c, tmp;
  	char word[1024]="";				/* will be cut when > 1024 chars long */
 	int chapter = 0;
+	int comment = 0;				/* status for comment lines (ignored) */
 	int chw = 0, tw = 0, qw = 0;	/* chapter words, total words, qrq words */
 	int chms = 0, tms = 0, qms = 0; /* millisec: chapter, total, since qrq */
 	time_t start_time, end_time;	/* conversion time */
@@ -236,7 +237,7 @@ int main (int argc, char** argv) {
 
 	/* Native Language Support by GNU gettext */
 	setlocale(LC_ALL, "" );
-	bindtextdomain( "ebook2cw", "" );
+	bindtextdomain( "ebook2cw", "/usr/share/locale" );
 	textdomain("ebook2cw");
 
 
@@ -403,8 +404,27 @@ int main (int argc, char** argv) {
 
 		if (c == '\r') 			/* DOS linebreaks */
 				continue;
+
+#if __MINGW32__
 		if (c == 0x04)			/* EOT; Win32 console produces this for Ctl-D */
 				break;
+#endif
+
+		if (comment) {
+			if (c == '\n') {
+				printf("Skipped %d characters (comments).\n", comment);
+				comment = 0;
+			}
+			else {
+				comment++;
+				continue;
+			}
+		}
+
+		if (c == '#')
+			comment = 1;
+
+
 
 		word[pos++] = c;
 
