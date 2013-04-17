@@ -410,9 +410,11 @@ int main (int argc, char** argv) {
 				break;
 #endif
 
+		if (c == '#') 
+			comment = 1;
+
 		if (comment) {
 			if (c == '\n') {
-				printf("Skipped %d characters (comments).\n", comment);
 				comment = 0;
 			}
 			else {
@@ -421,8 +423,7 @@ int main (int argc, char** argv) {
 			}
 		}
 
-		if (c == '#')
-			comment = 1;
+
 
 
 
