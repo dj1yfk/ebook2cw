@@ -1,5 +1,8 @@
 0.8.3 / 2013-03-03   Fabian Kurz   <fabian@fkurz.net>
 	* Added lowercase Greek alphabet
+	* Added multiple language support by GNU gettext.
+	* Comments can now be used in the CW input file; anything after
+	  a hash sign (#) will be treated as such (suggested by DM3DA)
 
 0.8.2 / 2013-01-04   Fabian Kurz   <fabian@fkurz.net>
 	* Time of conversion and speed-up calculations

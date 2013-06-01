@@ -152,6 +152,10 @@ typedef struct {
 	char isomap[256][4]; 		/* by these strings */
 	char utf8map[256][8];
 
+	int comment;				/* status for comments (which will not
+								   be translated to CW), 0 = off, 1 = on,
+								   2 = off after next word */
+
 	char configfile[2048];
 
 	char id3_author[80],
@@ -208,7 +212,6 @@ int main (int argc, char** argv) {
 	int pos, i, c, tmp;
  	char word[1024]="";				/* will be cut when > 1024 chars long */
 	int chapter = 0;
-	int comment = 0;				/* status for comment lines (ignored) */
 	int chw = 0, tw = 0, qw = 0;	/* chapter words, total words, qrq words */
 	int chms = 0, tms = 0, qms = 0; /* millisec: chapter, total, since qrq */
 	time_t start_time, end_time;	/* conversion time */
@@ -411,24 +414,18 @@ int main (int argc, char** argv) {
 #endif
 
 		if (c == '#') 
-			comment = 1;
+			cw.comment = 1;
 
-		if (comment) {
-			if (c == '\n') {
-				comment = 0;
-			}
-			else {
-				comment++;
-				continue;
-			}
+		if (cw.comment) {
+		   if (c == '\n') {
+				cw.comment = 2;
+		   }
+		   else {
+			   continue;
+		   }
 		}
 
-
-
-
-
 		word[pos++] = c;
-
 		
 		if ((c == ' ') || (c == '\n') || (pos == 1024)) {
 			word[pos] = '\0';
@@ -466,6 +463,8 @@ int main (int argc, char** argv) {
 				chms += tmp;
 				qms += tmp;
 				chw++; 
+				if (cw.comment == 2) 
+					cw.comment = 0;
 			}
 
 			/* Every 'cw.qrq' minutes speed up 1 WpM */
@@ -691,10 +690,14 @@ int makeword(char * text, CWP *cw) {
 	code = NULL;
 
 	if (c == '\n') { 				/* Same for UTF8 and ISO8859 */
-		if ((strlen(text) == 1) && cw->pBT) 	/* paragraph */
+		if (cw->comment == 0 && strlen(text) == 1 && cw->pBT) 	/* paragraph */
 			code = " -...- "; 
-		else 
+		else if (cw->comment) {		/* No spaces after comment line */
 			code = " ";
+		}
+		else {						/* Space instead of newline */
+			code = " ";
+		}
 	}
 	else if (c == '<') {				/* prosign on */
 		prosign = 1;
@@ -1993,6 +1996,8 @@ void init_cwp (CWP *cw) {
 
 	cw->encoding = ISO8859;
 	cw->use_isomapping = cw->use_utf8mapping = 0;
+
+	cw->comment = 0;
 
 	strcpy(cw->configfile, "ebook2cw.conf");
 
