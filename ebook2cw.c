@@ -156,6 +156,10 @@ typedef struct {
 								   be translated to CW), 0 = off, 1 = on,
 								   2 = off after next word */
 
+	/* Line of input file; position (byte) within the line */
+	int linecount;
+	int linepos;
+
 	char configfile[2048];
 
 	char id3_author[80],
@@ -212,7 +216,7 @@ int main (int argc, char** argv) {
 	int pos, i, c, tmp;
  	char word[1024]="";				/* will be cut when > 1024 chars long */
 	int chapter = 0;
-	int chw = 0, tw = 0, qw = 0;	/* chapter words, total words, qrq words */
+	int chw = 0, tw = 0;			/* chapter words, total words */
 	int chms = 0, tms = 0, qms = 0; /* millisec: chapter, total, since qrq */
 	time_t start_time, end_time;	/* conversion time */
 	int finishchapter = 0;			/* finish chapter after this sentence */
@@ -445,7 +449,6 @@ int main (int argc, char** argv) {
 				if (cw.qrq && cw.reset) {	
 					cw.wpm = cw.original_wpm;	
 					init_cw(&cw);
-					qw = 0;
 				}
 
 				finishchapter = 0;
@@ -688,6 +691,7 @@ int makeword(char * text, CWP *cw) {
  for (i = 0; i < strlen(text); i++) {
 	c = (unsigned char) text[i];
 	code = NULL;
+	cw->linepos++;
 
 	if (c == '\n') { 				/* Same for UTF8 and ISO8859 */
 		if (cw->comment == 0 && strlen(text) == 1 && cw->pBT) 	/* paragraph */
@@ -698,6 +702,8 @@ int makeword(char * text, CWP *cw) {
 		else {						/* Space instead of newline */
 			code = " ";
 		}
+		cw->linepos = 0;
+		cw->linecount++;
 	}
 	else if (c == '<') {				/* prosign on */
 		prosign = 1;
@@ -734,16 +740,17 @@ int makeword(char * text, CWP *cw) {
 	if (code == NULL) {
 #ifndef CGI
 		if (c < 128) {
-			fprintf(stderr, _("Warning: Don't know CW for '%c'.\n"), c);
+			fprintf(stderr, _("Warning: Don't know CW for '%c'. "), c);
 		}
 		else if (cw->encoding == ISO8859) {
-			fprintf(stderr, _("Warning: Don't know CW for '%c' (0x%01X) (try the -u switch to enable UTF-8).\n"), c, c);
+			fprintf(stderr, _("Warning: Don't know CW for '%c' (0x%01X) (try the -u switch to enable UTF-8). "), c, c);
 		}
 		else {
 			/* TODO: Consider using libunistring's unicode_character_name()
 			 * function to provide the name of the character */
-			fprintf(stderr, _("Warning: Don't know CW for unicode code point U+%04X\n"), c);
+			fprintf(stderr, _("Warning: Don't know CW for unicode code point U+%04X. "), c);
 		}
+		fprintf(stderr, "[Line %d, Byte %d]\n", cw->linecount, cw->linepos);
 #endif
 		code = " ";
 
@@ -980,7 +987,8 @@ void buf_check (int j, CWP *cw) {
 			cw->inpcm_size *=  2;
 			cw->noisebuf_size = cw->inpcm_size;
 			cw->mp3buffer_size *= 2;
-			if ((cw->inpcm = realloc(cw->inpcm, cw->inpcm_size*sizeof(short int)))== NULL) {
+
+			if ((cw->inpcm = realloc(cw->inpcm, cw->inpcm_size*sizeof(short int))) == NULL) {
 				fprintf(stderr, "Error: Can't realloc inpcm[%d]\n", cw->inpcm_size);
 				exit(EXIT_FAILURE);
 			}
@@ -991,10 +999,8 @@ void buf_check (int j, CWP *cw) {
 			}
 			fillnoisebuffer(cw->noisebuf, cw->noisebuf_size, NOISEAMPLITUDE);
 			
-			if ((cw->mp3buffer = realloc(cw->mp3buffer, cw->mp3buffer_size*sizeof(char))) 
-						   	== NULL) {
-				fprintf(stderr, "Error: Can't realloc mp3buffer[%d]\n", 
-								cw->mp3buffer_size);
+			if ((cw->mp3buffer = realloc(cw->mp3buffer, cw->mp3buffer_size*sizeof(char))) == NULL) {
+				fprintf(stderr, "Error: Can't realloc mp3buffer[%d]\n", cw->mp3buffer_size);
 				exit(EXIT_FAILURE);
 			}
 		}
@@ -1998,6 +2004,9 @@ void init_cwp (CWP *cw) {
 	cw->use_isomapping = cw->use_utf8mapping = 0;
 
 	cw->comment = 0;
+
+	cw->linecount = 1;
+	cw->linepos = 0;
 
 	strcpy(cw->configfile, "ebook2cw.conf");
 
