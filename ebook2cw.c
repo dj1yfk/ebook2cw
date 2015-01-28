@@ -750,7 +750,7 @@ int makeword(char * text, CWP *cw) {
 			 * function to provide the name of the character */
 			fprintf(stderr, _("Warning: Don't know CW for unicode code point U+%04X. "), c);
 		}
-		fprintf(stderr, "[Line %d, Byte %d]\n", cw->linecount, cw->linepos);
+		fprintf(stderr, _("[Line %d, Byte %d]\n"), cw->linecount, cw->linepos);
 #endif
 		code = " ";
 
