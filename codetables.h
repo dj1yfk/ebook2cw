@@ -1,7 +1,7 @@
 /* 
  * ISO 8859-1 and UTF-8 to Morse code mappings 
  * This file is part of ebook2cw and may be used under the same terms (GPL)
- * (C) 2008-2013 Fabian Kurz, DJ1YFK 
+ * (C) 2008-2017 Fabian Kurz, DJ1YFK 
  *
  * $Id$
  *
@@ -135,7 +135,7 @@ const static char *iso8859[] = {
 	".-",		/* ~A */
 	".-.-",		/* "A */
 	".--.-",	/* °A */
-	".- .",		/* AE */
+	".-.-",		/* AE */
 	"-.-..",	/* ,C */
 	"..-..",	/* `E */
 	"..-..",	/* 'E */
@@ -227,7 +227,7 @@ const static char *utf8table[] = {
 	".-",		/* ~A */
 	".-.-",		/* "A */
 	".--.-",	/* °A */
-	".- .",		/* AE */
+	".-.-",		/* AE */
 	"-.-..",	/* ,C */
 	"..-..",	/* `E */
 	"..-..",	/* 'E */
