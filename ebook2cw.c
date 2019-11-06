@@ -1066,6 +1066,12 @@ void command (char * cmd, CWP *cw) {
 				add_silence(i, cw);
 			}
 			break;
+		case 'W':
+			if (i >= 0 && i <= 10) {
+				cw->ews = i;
+				init_cw(cw);
+			}
+			break;
 		default:
 			fprintf(stderr, _("Invalid command %s. Ignored.\n"), cmd);				
 	}
