@@ -1067,7 +1067,7 @@ void command (char * cmd, CWP *cw) {
 			}
 			break;
 		case 'W':
-			if (i >= 0 && i <= 10) {
+			if (i >= 0 && i <= 40) {
 				cw->ews = i;
 				init_cw(cw);
 			}
