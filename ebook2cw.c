@@ -1062,7 +1062,7 @@ void command (char * cmd, CWP *cw) {
 			cw->snr = i;
 			break;
 		case 'S':
-			if (i >= 1 && i <= 10000) {
+			if (i >= 1 && i <= 30000) {
 				add_silence(i, cw);
 			}
 			break;
