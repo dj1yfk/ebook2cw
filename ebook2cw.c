@@ -59,9 +59,9 @@ source code looks properly indented with ts=4
 #define VERSION "0.0.0"
 #endif
 
-#define PCMBUFFER   220500	/* 20 seconds at 11kHz, for one word. plenty.	*/
-#define NOISEBUFFER 220500	/* 20 seconds at 11kHz, for one word. plenty.	*/
-#define MP3BUFFER   285000    /* abt 1.25*PCMBUFFER + 7200, as recommended	*/
+#define PCMBUFFER   1048576   /* 90 seconds at 11kHz, for one word. plenty.	*/
+#define NOISEBUFFER 1048576   /* 90 seconds at 11kHz, for one word. plenty.	*/
+#define MP3BUFFER   1310720   /* abt 1.25*PCMBUFFER + 7200, as recommended	*/
 
 #define ISO8859 0
 #define UTF8    1
@@ -1062,7 +1062,7 @@ void command (char * cmd, CWP *cw) {
 			cw->snr = i;
 			break;
 		case 'S':
-			if (i >= 1 && i <= 30000) {
+			if (i >= 1 && i <= 20000) {
 				add_silence(i, cw);
 			}
 			break;
