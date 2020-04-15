@@ -1,8 +1,7 @@
 ebook2cw v0.8.3 - convert ebooks to morse code - Fabian Kurz, DJ1YFK
 ---------------------------------------------------------------------
-$Id$
 
-Website: http://fkurz.net/ham/ebook2cw.html
+Website: https://fkurz.net/ham/ebook2cw.html
 
 ebook2cw is a command line program which converts a plain text ebook to morse
 code MP3 or OGG files. It works on several platforms, including Windows and
@@ -27,9 +26,9 @@ Support for LAME and/or OGG can be disabled by USE_LAME=NO and USE_OGG=NO
 respectively.
 
 make [DESTDIR=..] [USE_OGG=NO] [USE_LAME=NO]
-make install
+sudo make install
 
-
+Build prerequisites (Debian/Ubuntu): build-essential libvorbis-dev libmp3lame-dev
 
 CGI
 ---
@@ -44,10 +43,10 @@ ebook2cw as a CGI can be found at http://lcwo.net/.
 
 The default cgi version operates "on the fly", the "cgibuffered" option 
 first writes the whole MP3/OGG to a temporary file, so it can send a proper
-Content-Length: header which may be used with some clients.
+Content-Length: header which may be required for some clients.
 
 Contact
 -------
 Fabian Kurz, DJ1YFK <fabian@fkurz.net>
-http://fkurz.net/ham/ebook2cw.html
+https://fkurz.net/ham/ebook2cw.html
 

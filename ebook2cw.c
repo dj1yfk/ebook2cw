@@ -1,9 +1,9 @@
 /* 
 ebook2cw - converts an ebook to Morse MP3/OGG-files
 
-Copyright (C) 2007 - 2013  Fabian Kurz, DJ1YFK
+Copyright (C) 2007 - 2020  Fabian Kurz, DJ1YFK
 
-$Id$
+https://fkurz.net/ham/ebook2cw.html
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -35,11 +35,15 @@ source code looks properly indented with ts=4
 #include <ctype.h>
 #include <time.h>
 
+#if !__MINGW32__
 #include <locale.h>			/* For GNU gettext */
 #include <libintl.h>
 #define _(String) gettext (String)
 #define gettext_noop(String) String
 #define N_(String) gettext_noop (String)
+#else
+#define _(String) (String)
+#endif
 
 #ifndef CGI
 #include <signal.h>			/* Ctrl-C handling with signalhandler() */
@@ -242,11 +246,12 @@ int main (int argc, char** argv) {
 	start_time = time(NULL);
 	srand((unsigned int) start_time);
 
+#if !__MINGW32__
 	/* Native Language Support by GNU gettext */
 	setlocale(LC_ALL, "" );
 	bindtextdomain( "ebook2cw", "/usr/share/locale" );
 	textdomain("ebook2cw");
-
+#endif
 
 #ifndef CGI
 	/* Signal handling for Ctrl-C -- Does not work on Win32 because
@@ -258,7 +263,7 @@ int main (int argc, char** argv) {
 		return EXIT_FAILURE;
 	}
 
-	printf(_("ebook2cw %s - (c) 2013 by Fabian Kurz, DJ1YFK\n\n"), VERSION);
+	printf(_("ebook2cw %s - (c) 2007 - 2020 by Fabian Kurz, DJ1YFK\n\n"), VERSION);
 
 	/* 
 	 * Find and read ebook2cw.conf 

@@ -25,6 +25,7 @@ all: ebook2cw
 
 ebook2cw: ebook2cw.c codetables.h
 	gcc ebook2cw.c -pedantic -Wall -lm $(LDFLAGS) $(CFLAGS) -o ebook2cw
+	msgfmt -o po/de.mo po/de.po
 
 cgi: ebook2cw.c codetables.h
 	gcc -static ebook2cw.c $(LDFLAGS) -lm $(CFLAGS) -D CGI -o cw.cgi
@@ -46,6 +47,7 @@ install:
 	install    -m 0644 ebook2cw.conf   $(DESTDIR)/share/doc/ebook2cw/examples/
 	install    -m 0644 isomap.txt      $(DESTDIR)/share/doc/ebook2cw/examples/
 	install    -m 0644 utf8map.txt     $(DESTDIR)/share/doc/ebook2cw/examples/
+	install    -m 0644 po/de.mo        $(DESTDIR)/share/locale/de/LC_MESSAGES/ebook2cw.mo
 	
 uninstall:
 	rm -f $(DESTDIR)/bin/ebook2cw
@@ -62,10 +64,12 @@ dist:
 	rm -f releases/ebook2cw-$(VERSION).tar.gz
 	rm -rf releases/ebook2cw-$(VERSION)
 	mkdir ebook2cw-$(VERSION)
+	mkdir ebook2cw-$(VERSION)/po
 	cp ebook2cw.c codetables.h ChangeLog ebook2cw.1 \
 			ebook2cw.conf isomap.txt utf8map.txt \
 			ebook2cw.bat \
 			README COPYING Makefile ebook2cw-$(VERSION)
+	cp po/*.po ebook2cw-$(VERSION)/po
 	tar -zcf ebook2cw-$(VERSION).tar.gz ebook2cw-$(VERSION)
 	mv ebook2cw-$(VERSION) releases/
 	mv ebook2cw-$(VERSION).tar.gz releases/

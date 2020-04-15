@@ -1,7 +1,7 @@
-0.8.3 / 2015-  -     Fabian Kurz   <fabian@fkurz.net>
+0.8.3 / 2020-04-15   Fabian Kurz   <fabian@fkurz.net>
 	* Added lowercase Greek alphabet
 	* Added multiple language support by GNU gettext.
-	* Added text command |Sx will add x (1 < x < 10000) milliseconds
+	* Added text command |Sx will add x (1 < x < 20000) milliseconds
 	  of silence to the output file
 	* Comments can now be used in the CW input file; anything after
 	  a hash sign (#) will be treated as such (suggested by DM3DA)
