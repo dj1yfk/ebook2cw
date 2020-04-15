@@ -1103,12 +1103,12 @@ void readconfig (CWP *cw) {
 	 */
 
 	if ((conf = fopen(cw->configfile, "r")) == NULL) {
+#if !__MINGW32__
 		/* ebook2cw.conf not in current directory */
 		if ((homedir = getenv("HOME")) == NULL) {	/* no home or Windows */
 			return;
 		}
-#if !__MINGW32__
-		/* Linux/Unix: Look for ~/.ebook2cw/ebook2cw.conf */
+		/* Look for ~/.ebook2cw/ebook2cw.conf */
 		snprintf(cw->configfile, 2048, "%s/.ebook2cw/ebook2cw.conf", homedir);
 		if ((conf = fopen(cw->configfile, "r")) == NULL) {
 			/* Not in ~/.ebook2cw/ either, look for it in
@@ -1137,6 +1137,8 @@ void readconfig (CWP *cw) {
 				return;
 			}
 		}
+#else
+        return; /* Win32 and no ebook2cw.conf in current dir -> return */
 #endif
 	}
 
