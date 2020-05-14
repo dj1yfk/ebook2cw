@@ -378,6 +378,10 @@ int main (int argc, char** argv) {
 	strcat(text, " ");
 	urldecode(text);
 
+    if (cw.wpm == 0 || cw.freq == 0) {
+        exit(1);
+    }
+
 	flush_ogg(&cw);
 #endif
 
