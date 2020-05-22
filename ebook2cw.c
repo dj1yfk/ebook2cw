@@ -336,6 +336,8 @@ int main (int argc, char** argv) {
 
 
 #ifdef CGI
+/* CGI: utf8 input by default */
+cw.encoding = UTF8;
 /* CGI standard: write directly to stdout ==> no Content-Length possible
  * CGI buffered: write to file /tmp/$time-$rnd and later generate output */
 #ifndef CGIBUFFERED				
@@ -374,7 +376,22 @@ int main (int argc, char** argv) {
 	if ((querystring == NULL) || strlen(querystring) > 9000) {
 			exit(1);
 	}
-	sscanf(querystring, "s=%d&e=%d&f=%d&t=%9000s", &cw.wpm, &cw.farnsworth, &cw.freq, text);
+
+    /* the query parameters may look like:
+     * d=001&s=25&e=20&f=600&t=text  => download, offer as filename "lcwo-001.mp3"
+     * s=25&e=20&f=600&t=text        => return normal file
+     */
+
+    int download = 0;
+
+    printf("QS: >%s<\n", querystring);
+
+    if (querystring[0] == 'd') {
+	    sscanf(querystring, "d=%d&s=%d&e=%d&f=%d&t=%9000s", &download, &cw.wpm, &cw.farnsworth, &cw.freq, text);
+    }
+    else {
+    	sscanf(querystring, "s=%d&e=%d&f=%d&t=%9000s", &cw.wpm, &cw.farnsworth, &cw.freq, text);
+    }
 	strcat(text, " ");
 	urldecode(text);
 
@@ -552,6 +569,10 @@ int main (int argc, char** argv) {
 	free(cw.noisebuf);
 	free(cw.dah_buf);
 	free(cw.dit_buf);
+
+    if (download) {
+	    printf("Content-Disposition: attachment; filename=\"lcwo-%03d.txt\"\n", download);
+    }
 
 #ifdef CGIBUFFERED
 	/* File is completed, so we know the length and can send the 

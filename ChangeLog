@@ -1,4 +1,4 @@
-0.8.3 / 2020-04-15   Fabian Kurz   <fabian@fkurz.net>
+0.8.3 / 2020-05-24   Fabian Kurz   <fabian@fkurz.net>
 	* Added lowercase Greek alphabet
 	* Added multiple language support by GNU gettext.
 	* Added text command |Sx will add x (1 < x < 20000) milliseconds
@@ -7,6 +7,7 @@
 	  a hash sign (#) will be treated as such (suggested by DM3DA)
 	* Warning message for unknown characters improved (tells line
 	  number and character position; suggested by DL2KI)
+	* CGI mode accepts UTF8 by default, download mode added
 
 0.8.2 / 2013-01-04   Fabian Kurz   <fabian@fkurz.net>
 	* Time of conversion and speed-up calculations
