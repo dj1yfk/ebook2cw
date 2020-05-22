@@ -571,7 +571,7 @@ cw.encoding = UTF8;
 	free(cw.dit_buf);
 
     if (download) {
-	    printf("Content-Disposition: attachment; filename=\"lcwo-%03d.txt\"\n", download);
+	    printf("Content-Disposition: attachment; filename=\"lcwo-%03d.mp3\"\n", download);
     }
 
 #ifdef CGIBUFFERED
