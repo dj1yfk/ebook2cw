@@ -220,6 +220,7 @@ int main (int argc, char** argv) {
 	int pos, i, c, tmp;
  	char word[1024]="";				/* will be cut when > 1024 chars long */
 	int chapter = 0;
+    int download = 0;               /* CGI: Send content-disposition header? */
 	int chw = 0, tw = 0;			/* chapter words, total words */
 	int chms = 0, tms = 0, qms = 0; /* millisec: chapter, total, since qrq */
 	time_t start_time, end_time;	/* conversion time */
@@ -381,10 +382,6 @@ cw.encoding = UTF8;
      * d=001&s=25&e=20&f=600&t=text  => download, offer as filename "lcwo-001.mp3"
      * s=25&e=20&f=600&t=text        => return normal file
      */
-
-    int download = 0;
-
-    printf("QS: >%s<\n", querystring);
 
     if (querystring[0] == 'd') {
 	    sscanf(querystring, "d=%d&s=%d&e=%d&f=%d&t=%9000s", &download, &cw.wpm, &cw.farnsworth, &cw.freq, text);
