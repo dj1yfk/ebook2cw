@@ -20,6 +20,11 @@ ifeq ($(USE_OGG), YES)
 		LDFLAGS:=$(LDFLAGS) -lvorbis -lvorbisenc -logg
 endif
 
+UNAME := $(shell uname)
+
+ifeq ($(UNAME), Darwin)
+	LDFLAGS += +lintl
+endif
 
 all: ebook2cw
 
