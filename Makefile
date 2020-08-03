@@ -23,7 +23,7 @@ endif
 UNAME := $(shell uname)
 
 ifeq ($(UNAME), Darwin)
-	LDFLAGS += +lintl
+	LDFLAGS += -lintl
 endif
 
 all: ebook2cw
