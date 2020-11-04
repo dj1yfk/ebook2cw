@@ -272,7 +272,7 @@ int main (int argc, char** argv) {
 
 	readconfig(&cw);
 
-	while((i=getopt(argc,argv, "XOo:w:W:e:f:uc:k:Q:R:pF:s:b:q:a:t:y:S:hnT:N:B:C:g:d:l:"))!= -1){
+	while((i=getopt(argc,argv, "XOo:w:W:e:f:uc:k:Q:R:pF:s:b:q:a:t:y:S:hnT:N:B:C:g:d:l:E:"))!= -1){
 		setparameter(i, optarg, &cw);
 	} 
 
@@ -1331,7 +1331,11 @@ void setparameter (char i, char *value, CWP *cw) {
 			case 'C':
 				cw->bandpassfc = atoi(value);
 				break;
-				
+            case 'E':
+				strncpy(cw->configfile, value, 78);
+                readconfig(cw);
+				break;
+
 		} /* switch */
 
 }
