@@ -401,7 +401,9 @@ cw.encoding = UTF8;
 
 	init_cw(&cw);	/* generate raw dit, dah */
 
-	strcat(cw.chapterstr, " ");
+	if (strlen(cw.chapterstr)) {
+		strcat(cw.chapterstr, " ");
+	}
 
 	cw.original_wpm = cw.wpm;					/* may be changed by QRQing */
 	chapter = 0;
@@ -885,8 +887,15 @@ void openfile (int chapter, CWP *cw) {
 	ogg_packet       hdr_code;
 #endif
 
-	snprintf(cw->outfilename, 80, "%s%04d.%s",  cw->chapterfilename, chapter, 
+    /* If we have a chapter separator string, use format Chapter0001.mp3 */
+	if (strlen(cw->chapterstr) && cw->chapterstr[0] != '-') {
+		snprintf(cw->outfilename, 80, "%s%04d.%s",  cw->chapterfilename,
+			chapter, (cw->encoder == MP3) ? "mp3" : "ogg");
+	}
+	else {  /* otherwise just Chapter.mp3 */
+		snprintf(cw->outfilename, 80, "%s.%s",  cw->chapterfilename,
 			(cw->encoder == MP3) ? "mp3" : "ogg");
+	}
 	printf(_("Starting %s\n"),  cw->outfilename);
  
 	if ((cw->encoder != NOENC) && 

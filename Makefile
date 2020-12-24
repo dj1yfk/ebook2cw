@@ -29,7 +29,7 @@ endif
 all: ebook2cw
 
 ebook2cw: ebook2cw.c codetables.h
-	gcc ebook2cw.c -pedantic -Wall -lm $(LDFLAGS) $(CFLAGS) -o ebook2cw
+	gcc ebook2cw.c -pedantic -Wall -Wno-format-truncation -lm $(LDFLAGS) $(CFLAGS) -o ebook2cw
 	msgfmt -o po/de.mo po/de.po
 
 cgi: ebook2cw.c codetables.h

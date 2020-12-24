@@ -1,3 +1,8 @@
+0.8.4 / unreleased   Fabian Kurz   <fabian@fkurz.net>
+	* If chapter separator is empty (-c "") or starts with
+	  a dash (-c "-"), do not append a chapter number to filenames
+	  (tnx F6FLF)
+
 0.8.3 / 2020-05-23   Fabian Kurz   <fabian@fkurz.net>
 	* Added lowercase Greek alphabet
 	* Added multiple language support by GNU gettext.
