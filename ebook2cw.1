@@ -1,4 +1,4 @@
-.TH ebook2cw 1 "MAY 2020" Linux "User Manuals"
+.TH ebook2cw 1 "APRIL 2021" Linux "User Manuals"
 .SH NAME
 ebook2cw \- Convert ebooks to Morse code audio files (MP3/OGG)
 .SH SYNOPSIS
@@ -61,7 +61,8 @@ reset to the initial value at the start of each chapter. [0]
 - MP3 quality, 1 (best) to 9 (worst). CW still sounds very good with the worst quality, encoding time is greatly reduced. [5]
 
 .B -c chapter separator 
-- Split chapters at this string. [CHAPTER]
+- Split chapters at this string [CHAPTER]. If empty or starts with a dash,
+  chapters will not be split and the output files will not be numbered.
 
 .B -d duration
 - Splits output files after "duration" seconds; finishes the current sentence.
@@ -87,6 +88,9 @@ reset to the initial value at the start of each chapter. [0]
 .B -u 
 - Switches input encoding format to UTF-8. Currently supported alphabets
 include Latin, Greek, Hebrew, Arabic and Cyrillic. Default is ISO 8859-1.
+
+.B -E file
+- Loads configuration from `file`.
 
 .B -g file
 - Guesses the encoding of `file` (ISO 8859-1 / ASCII or UTF-8).
