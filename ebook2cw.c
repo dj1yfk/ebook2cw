@@ -1,7 +1,7 @@
 /* 
 ebook2cw - converts an ebook to Morse MP3/OGG-files
 
-Copyright (C) 2007 - 2020  Fabian Kurz, DJ1YFK
+Copyright (C) 2007 - 2021  Fabian Kurz, DJ1YFK
 
 https://fkurz.net/ham/ebook2cw.html
 
@@ -264,7 +264,7 @@ int main (int argc, char** argv) {
 		return EXIT_FAILURE;
 	}
 
-	printf(_("ebook2cw %s - (c) 2007 - 2020 by Fabian Kurz, DJ1YFK\n\n"), VERSION);
+	printf(_("ebook2cw %s - (c) 2007 - 2021 by Fabian Kurz, DJ1YFK\n\n"), VERSION);
 
 	/* 
 	 * Find and read ebook2cw.conf 
@@ -616,22 +616,12 @@ cleanup:
 /* init_cw  -  generates a dit and a dah to dit_buf and dah_buf */
 
 void init_cw (CWP *cw) {
+	int samples_per_minute;
 	int x, len;
 	double val, val1, val2;
 
-	/* calculate farnsworth length samples */
-	if (cw->farnsworth) {
-		if (cw->farnsworth > cw->wpm) {
-			fprintf(stderr, _("Warning: Effective speed (-e %d) must be lower "
-							"than character speed (-w %d)! Speed adjusted.\n"), 
-							cw->farnsworth, cw->wpm);
-			cw->farnsworth = cw->wpm;
-		}
-		cw->fditlen = (int) (6.0*cw->samplerate/(5.0*cw->farnsworth));
-	}
-
-	/* dit */
-	len = (int) (6.0*cw->samplerate/(5.0*cw->wpm));			/* in samples */
+	samples_per_minute = 60*cw->samplerate;
+	len = (int) (samples_per_minute/(50.0*cw->wpm));
 
 	/* size of dit_buf, dah_buf may have to be increased, when speed decreased */
 	if (len > cw->ditlen) {
@@ -682,6 +672,46 @@ void init_cw (CWP *cw) {
 	} /* for */
 	
 	cw->ditlen = len;
+
+	/* calculate farnsworth length samples */
+	if (cw->farnsworth) {
+		if (cw->farnsworth > cw->wpm) {
+			fprintf(stderr, _("Warning: Effective speed (-e %d) must be lower "
+						"than character speed (-w %d)! Speed adjusted to %d.\n"),
+					cw->farnsworth, cw->wpm, cw->wpm);
+			cw->farnsworth = cw->wpm;
+		}
+		/* by convention, wpm is measured using the word "Paris". With a dah
+		   being 3 dits, and a spacing of one dit between sigs, this word
+		   has a total length of
+		   1+3+3+1 +3 +3 +1+3 +1 +3 +1+3+1 +2 +3 +1+1 +1 +3 +1+1+1 +2 = 43 dit lengths
+		   Together with an additional word break of 7 dits this makes 50
+		   dit lengths.
+
+		   Actually, the total duration of only the sigs themselves is only
+		   1+3+3+1 +3    +1+3 +1    +1+3+1 +2    +1+1 +1    +1+1+1 +2 = 31 dit lengths
+		   and the other 12 dits are inter-sig pauses.
+		   The definition of n "words per minute" speed means that this is
+		   the speed where the operator gives the word "Paris" n times per
+		   minute.
+		   The sigs at a speed of cw->wpm have a total length of
+		   cw->farnsworth * 31 dits
+		   The total length of pauses is
+		   cw->farnsworth * (12+7) dits
+		   Note that the the effective wpm is relevant for the count here.
+
+		   According to the farnsworth method, the inter-sig and inter-word
+		   pauses are elongated such that the operator gives "Paris" only
+		   cw->farnsworth times.
+
+		   The total length of the sigs in samples is
+		   */
+		int total_sigs_samples = cw->farnsworth * 31 * cw->ditlen;
+		/*
+		   This allows to determine the length of a ditlength during a
+		   farnsworth break.*/
+		cw->fditlen = (samples_per_minute - total_sigs_samples) / (cw->farnsworth * (12+7));
+	}
 
 	/* Calculate maximum number of bytes per 'dah' for the PCM stream,
 	 * this will be used later to check if the buffer runs full
@@ -795,18 +825,24 @@ int makeword(char * text, CWP *cw) {
 
 		c = code[w];
 
-		if (c == '.') 
-			for (u=0; u < cw->ditlen; u++)
+		if (c == '.') {
+			for (u=0; u < cw->ditlen; u++) {
 					cw->inpcm[++j] = cw->dit_buf[u]; 
-		else if (c == '-') 
-			for (u=0; u < (3*cw->ditlen); u++)
+			}
+		}
+		else if (c == '-') {
+			for (u=0; u < (3*cw->ditlen); u++) {
 					cw->inpcm[++j] = cw->dah_buf[u]; 
-		else 								/* word space */
-			for (u=0;u < cw->wordspace; u++)
+			}
+		}
+		else {								/* word space */
+			for (u=0;u < cw->wordspace; u++) 
 					cw->inpcm[++j] = 0; 
+		}
 	
-		for (u=0; u < cw->ditlen; u++)
+		for (u=0; u < cw->ditlen; u++) {
 				cw->inpcm[++j] = 0; 
+		}
 	}	/* foreach dot/dash */
 
 	if (prosign == 0) {
