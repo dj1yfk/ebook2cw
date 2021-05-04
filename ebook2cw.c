@@ -57,6 +57,11 @@ source code looks properly indented with ts=4
 #include <errno.h>
 #endif
 
+#include <limits.h>			/* PATH_MAX */
+#ifndef PATH_MAX			/* Not defined e.g. on GNU/hurd */
+#define PATH_MAX 4096
+#endif
+
 #include "codetables.h"
 
 #ifndef VERSION
@@ -141,8 +146,8 @@ typedef struct {
 	unsigned char *mp3buffer;
 	/* Chapter splitting */
 	char chapterstr[80], 				/* split chapters by this string */
-		 chapterfilename[80],			/* Prefix, e.g. "Chapter-" */
-		 outfilename[256];				/* Full name of current outputfile */
+		 chapterfilename[PATH_MAX-8],	/* Prefix, e.g. "Chapter-" */
+		 outfilename[PATH_MAX];			/* Full name of current outputfile */
 	/* time based splitting, seconds */
 	int chaptertime;
 	/* word based splitting */
@@ -925,11 +930,11 @@ void openfile (int chapter, CWP *cw) {
 
     /* If we have a chapter separator string, use format Chapter0001.mp3 */
 	if (strlen(cw->chapterstr) && cw->chapterstr[0] != '-') {
-		snprintf(cw->outfilename, 80, "%s%04d.%s",  cw->chapterfilename,
+		snprintf(cw->outfilename, PATH_MAX, "%s%04d.%s",  cw->chapterfilename,
 			chapter, (cw->encoder == MP3) ? "mp3" : "ogg");
 	}
 	else {  /* otherwise just Chapter.mp3 */
-		snprintf(cw->outfilename, 80, "%s.%s",  cw->chapterfilename,
+		snprintf(cw->outfilename, PATH_MAX, "%s.%s",  cw->chapterfilename,
 			(cw->encoder == MP3) ? "mp3" : "ogg");
 	}
 	printf(_("Starting %s\n"),  cw->outfilename);
@@ -1287,7 +1292,7 @@ void setparameter (char i, char *value, CWP *cw) {
 				strncpy(cw->chapterstr, value, 78);
 				break;
 			case 'o':
-				strncpy(cw->chapterfilename, value, 78);
+				strncpy(cw->chapterfilename, value, PATH_MAX - 10);
 				break;
 			case 'a':
 				strncpy(cw->id3_author, value, 78);
