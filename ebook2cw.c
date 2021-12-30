@@ -528,8 +528,14 @@ cw.encoding = UTF8;
 
 
 		} /* word */
-
 	} /* eof */
+
+	/* If the file ends without newline or space, but directly with EOF after
+	 * the last word, this one is lost, so we need to add it... */
+	if (strlen(word) && word[0] != '|' && word[0] != '#') {
+		makeword(mapstring(word, &cw), &cw);
+		chw++; 
+	}
 
 /* CGI: Add some silence (500ms) to the end of the file */
 #ifdef CGI
