@@ -1,8 +1,6 @@
-# ebook2cw Makefile -- Fabian Kurz, DJ1YFK -- http://fkurz.net/ham/ebook2cw.html
-#
-# $Id$
+# ebook2cw Makefile -- Fabian Kurz, DJ5CW -- http://fkurz.net/ham/ebook2cw.html
 
-VERSION=0.8.4
+VERSION=0.8.5
 DESTDIR ?= /usr
 
 # Set to NO to compile without Lame/Ogg-vorbis support

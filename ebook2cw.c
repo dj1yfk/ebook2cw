@@ -1,7 +1,7 @@
 /* 
 ebook2cw - converts an ebook to Morse MP3/OGG-files
 
-Copyright (C) 2007 - 2021  Fabian Kurz, DJ1YFK
+Copyright (C) 2007 - 2022  Fabian Kurz, DJ5CW
 
 https://fkurz.net/ham/ebook2cw.html
 
@@ -269,7 +269,7 @@ int main (int argc, char** argv) {
 		return EXIT_FAILURE;
 	}
 
-	printf(_("ebook2cw %s - (c) 2007 - 2021 by Fabian Kurz, DJ1YFK\n\n"), VERSION);
+	printf(_("ebook2cw %s - (c) 2007 - 2022 by Fabian Kurz, DJ5CW\n\n"), VERSION);
 
 	/* 
 	 * Find and read ebook2cw.conf 
