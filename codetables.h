@@ -408,7 +408,7 @@ const static char *utf8table[] = {
 	/* Greek Alphabet, small letters */       
 	".-", "-..." , "--.", "-..", ".", "--..", "....", 
 	"-.-.", "..", "-.-", ".-..", "--", "-.", "-..-", "---", 
-	".--.", ".-.", NULL, "...", "-", "-.--", "..-.", "----", 
+	".--.", ".-.", "...", "...", "-", "-.--", "..-.", "----", 
 	"--.-", ".--", NULL, NULL, NULL, NULL, NULL, NULL, 
 	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
 	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
@@ -486,8 +486,8 @@ const static char *utf8table[] = {
 	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
 	/* 1488-1514 Hebrew according to Wikipedia */
 	".-", "-...", "--.", "-..", "---", ".", "--..", "....", 
-	"..-", "..", NULL, "-.-", ".-..", NULL, "--", "-.", NULL,
-	"-.-.", ".---", NULL, ".--.", NULL, ".--", "--.-", ".-.", "...", 
+	"..-", "..", "-.-", "-.-", ".-..", "--", "--", "-.", "-.",
+	"-.-.", ".---", ".--.", ".--.", ".--", ".--", "--.-", ".-.", "...", 
 	"-", NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
 	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
 	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
@@ -500,11 +500,11 @@ const static char *utf8table[] = {
 	 * 1569-1610
 	 */
 	".", NULL, NULL, NULL, NULL, NULL, 
-	".-", "-...", NULL, "-", "-.-.", 
+	".-", "-...", "-", "-", "-.-.", 
 	".---", "....", "---", "-..", "--..", ".-.", "---.", "...", 
 	"----", "-..-", "...-", "..-", "-.--", ".-.-", "--.", NULL, 
 	NULL, NULL, NULL, NULL, NULL, "..-.", "--.-", "-.-", 
-	".-..", "--", "-.", NULL, ".--", NULL, "..", NULL, 
+	".-..", "--", "-.", "..-..", ".--", NULL, "..", NULL, 
 	NULL, NULL, NULL, NULL, NULL, NULL, 
 	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
 	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
