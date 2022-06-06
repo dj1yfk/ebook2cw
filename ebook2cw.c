@@ -743,7 +743,43 @@ void init_cw (CWP *cw) {
 }
 
 
-
+/* returns number of utf8 octets consumed */
+typedef unsigned long ucs4;
+int utf8_to_ucs4(const unsigned char *s, ucs4 *ret)
+{
+	int iA;
+	ucs4 c1 = *s;
+	if(!(c1 & 0x80)) {
+		*ret = c1; return 1;
+	}
+	c1 ^= 0x80;
+	unsigned char bit = 0x40;
+	for(iA=0; iA<5; iA++, bit>>=1) {
+		if(!(c1 & bit)) break;
+		if((s[iA+1]&0xc0) != 0x80) return 0;
+		c1 ^= bit;
+	}
+	if(iA == 0) return 0;
+	int num = iA;
+	for(iA=0; iA<num; iA++) {
+		ucs4 d = s[iA+1];
+		c1 <<= 6;
+		c1 |= d & 0x3f;
+	}
+	*ret = c1;
+	return num+1;
+}
+ucs4 getNextChar(const unsigned char *s, int *idx, int encoding)
+{
+	if(encoding != UTF8)
+		return s[(*idx)++];
+	ucs4 ret;
+	int len = utf8_to_ucs4(&s[*idx], &ret);
+	if(len == 0)	// invalid utf-8 character
+		return s[(*idx)++];
+	*idx += len;
+	return ret;
+}
 
 
 /* makeword  --  converts 'text' to CW by concatenating dit_buf amd dah_bufs,
@@ -754,12 +790,11 @@ int makeword(char * text, CWP *cw) {
 
  int c, i, j, u, w;
  int prosign = 0;
- unsigned char last=0;		/* for utf8 2-byte characters */
 
  j = 0;						/* position in 'inpcm' buffer */
 
- for (i = 0; i < strlen(text); i++) {
-	c = (unsigned char) text[i];
+ for (i = 0; i < strlen(text);) {
+	c = getNextChar((unsigned char*)text, &i, cw->encoding);
 	code = NULL;
 	cw->linepos++;
 
@@ -784,27 +819,19 @@ int makeword(char * text, CWP *cw) {
 		code = "";			/* only inserts letter space */
 	}
 	else if (cw->encoding == ISO8859) {	
-		code = iso8859[c];
+		if(c < sizeof(iso8859)/sizeof(iso8859[0])) {
+			code = iso8859[c];
+		}
 	}
 	else if (cw->encoding == UTF8) {
-		/* Character may be 1-byte ASCII or 2-byte UTF8 */
-		if (!(c & 128)) {						/* MSB = 0 -> 7bit ASCII */
+		if(c < sizeof(iso8859)/sizeof(iso8859[0])) {
 			code = iso8859[c];					/* subset of iso8859 */
-		}
-		else {
-			if (last && (c < 192) ) {			/* this is the 2nd byte */
-				/* 110yyyyy 10zzzzzz -> 00000yyy yyzzzzzz */
-				c = ((last & 31) << 6) | (c & 63);
-				code = utf8table[c];
-				last = 0;
-			}
-			else {								/* this is the first byte */
-				last = c;
-			}
+		} else if(c < sizeof(utf8table)/sizeof(utf8table[0])) {
+			code = utf8table[c];
+		} else if(c>=0x3040 && c<=0x30ff) {	// Japanese Kana
+			code = kanaTable[c-0x3040];
 		}
 	}
-
-	if (last) continue;				/* first of two-byte character read */
 
 	/* Not found anything, produce warning message */
 	if (code == NULL) {
