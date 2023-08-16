@@ -1,4 +1,4 @@
-ebook2cw v0.8.4 - convert ebooks to morse code - Fabian Kurz, DJ5CW
+ebook2cw v0.8.5 - convert ebooks to morse code - Fabian Kurz, DJ5CW
 ---------------------------------------------------------------------
 
 Website: https://fkurz.net/ham/ebook2cw.html
@@ -20,7 +20,7 @@ Statically compiled binaries are available at the project website, for Linux
 (i386) and Win32. Those should be suitable for most users.
 
 2) Source
-A Makefile is included; it compiles both under Linux and Windows (with MinGW).
+A Makefile is included; it compiles under Linux, Windows (with MinGW) and OS X.
 DESTDIR is /usr by default (so the binary will be in /usr/bin/).
 Support for LAME and/or OGG can be disabled by USE_LAME=NO and USE_OGG=NO
 respectively.

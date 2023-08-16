@@ -1,7 +1,7 @@
 /* 
 ebook2cw - converts an ebook to Morse MP3/OGG-files
 
-Copyright (C) 2007 - 2022  Fabian Kurz, DJ5CW
+Copyright (C) 2007 - 2023  Fabian Kurz, DJ5CW
 
 https://fkurz.net/ham/ebook2cw.html
 
@@ -269,7 +269,7 @@ int main (int argc, char** argv) {
 		return EXIT_FAILURE;
 	}
 
-	printf(_("ebook2cw %s - (c) 2007 - 2022 by Fabian Kurz, DJ5CW\n\n"), VERSION);
+	printf(_("ebook2cw %s - (c) 2007 - 2023 by Fabian Kurz, DJ5CW\n\n"), VERSION);
 
 	/* 
 	 * Find and read ebook2cw.conf 
@@ -996,6 +996,7 @@ void help (void) {
 	printf(_("         [-u] [-S ISO|UTF] [-n] [-e eff.wpm] [-W space]\n"));
 	printf(_("         [-N snr] [-B filter bandwidth] [-C filter center]\n"));
 	printf(_("         [-T 0..2] [-g filename] [-l words] [-d seconds]\n"));
+	printf(_("         [-O for OGG output format] \n"));
 	printf(_("         [infile]\n\n"));
 	printf(_("defaults: 25 WpM, 600Hz, RT=FT=50, s=11025Hz, b=16kbps,\n"));
 	printf(_("          c=\"CHAPTER\", o=\"Chapter\" infile = stdin\n"));

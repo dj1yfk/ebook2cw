@@ -1,9 +1,11 @@
-0.8.5 / unreleased   Fabian Kurz   <fabian@fkurz.net>
+0.8.5 / 2023-08-16   Fabian Kurz   <fabian@fkurz.net>
 	* Allow output file names to be up to PATH_MAX (typ. 4096)
 	  characters long (tnx SQ6JNX)
 	* If the input file ends without a space or newline, don't
 	  ignore the last word
 	* Change "ì" from ".." to ".---." (tnx IZ4APU)
+	* Add some missing letters for Arabic, Greek, Hebrew
+	* Fixes in the Makefile (thanks Stéphan Kochen)
 
 0.8.4 / 2021-04-07   Fabian Kurz   <fabian@fkurz.net>
 	* If chapter separator is empty (-c "") or starts with
